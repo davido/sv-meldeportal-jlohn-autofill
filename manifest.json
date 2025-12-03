@@ -25,5 +25,11 @@
       "32": "icons/icon32.png",
       "48": "icons/icon48.png"
     }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sv-meldeportal-jlohn-autofill@ostrovsky.software",
+      "strict_min_version": "109.0"
+    }
   }
 }
