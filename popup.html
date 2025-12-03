@@ -1,0 +1,55 @@
+
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>SV-Meldeportal JLohn Autofill</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 8px;
+      min-width: 320px;
+      max-width: 360px;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0 0 4px;
+    }
+    p {
+      font-size: 12px;
+      margin: 4px 0;
+    }
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      font-family: monospace;
+      font-size: 11px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 6px;
+      margin-right: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #444;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>SV-Meldeportal &amp; JLohn</h1>
+  <p>1. JLohn-Zeile hier einfügen <strong>oder</strong> aus der Zwischenablage lesen.</p>
+  <textarea id="jlohnInput" placeholder="511,00;;17,89;;0,00;;17,29;;115,16;;651,00;;0,00;;91,00;;0,00;;147,00;;87,50;;11,90;;5,25;;1619,81;;0,00;;0,00;;0,00;;"></textarea>
+  <div>
+    <button id="btnClipboard" type="button">Aus Zwischenablage holen</button>
+    <button id="btnFill" type="button">SV-Meldeportal befüllen</button>
+  </div>
+  <p id="status"></p>
+  <script src="popup.js"></script>
+</body>
+</html>

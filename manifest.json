@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "SV-Meldeportal JLohn Autofill",
+  "version": "1.1.1",
+  "description": "Füllt die Beitragsfelder im SV-Meldeportal automatisch aus einer JLohn-Zeile aus (mit Popup & optionalem Clipboard-Lesen).",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "clipboardRead"
+  ],
+  "host_permissions": [
+    "*://*.sv-meldeportal.de/*",
+    "*://sv-meldeportal.de/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png"
+  },
+  "action": {
+    "default_title": "SV-Meldeportal aus JLohn befüllen",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  }
+}
