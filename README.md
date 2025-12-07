@@ -18,24 +18,19 @@ Dieses Projekt stellt eine **Firefox‑Browser‑Erweiterung** bereit, die autom
 
 ## 📦 Inhalt des Erweiterungs‑Ordners
 
-- `manifest.json`  
-- `popup.html`  
-- `popup.js`  
-- `icons/icon16.png`  
-- `icons/icon32.png`  
-- `icons/icon48.png`  
+- manifest.json
+- popup.html
+- popup.js
+- icons/icon16.png
+- icons/icon32.png
+- icons/icon48.png
 
 ---
 
 ## 🔧 Installation (Firefox)
 
-1. Lade das ZIP aus den **GitHub Releases** herunter.  
-2. Entpacke das ZIP.  
-3. Öffne in Firefox:  
-   **`about:debugging#/runtime/this-firefox`**  
-4. Klicke auf **„Temporäre Add-on laden“**.  
-5. Wähle die Datei **`manifest.json`** im entpackten Ordner.  
-6. Das Add-on erscheint nun in der Toolbar (ggf. Icon über „Anpassen…“ hinzufügen).
+1. Lade die XPI-Date: https://addons.mozilla.org/en-GB/firefox/addon/sv-meldeportal-jlohn-autofill/
+2. Klick install button.
 
 ---
 
