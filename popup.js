@@ -1,16 +1,19 @@
+// -------------------- POPUP: Clipboard + Button-Handling --------------------
 
 async function readFromClipboardIfEmpty(textarea, statusEl) {
-  let txt = textarea.value.trim();
-  if (txt) {
-    return txt;
-  }
+  let txt = (textarea.value || "").trim();
+  if (txt) return txt;
+
   if (!navigator.clipboard || !navigator.clipboard.readText) {
-    statusEl.textContent = "Clipboard-API nicht verfügbar – bitte JLohn-Zeile einfügen.";
+    statusEl.textContent = "Clipboard-API nicht verfügbar – bitte JLohn-Zeile einfügen (Ctrl+V).";
     return "";
   }
+
   try {
     statusEl.textContent = "Lese Zwischenablage …";
     txt = await navigator.clipboard.readText();
+    txt = (txt || "").trim();
+
     if (txt) {
       textarea.value = txt;
       statusEl.textContent = "Zwischenablage übernommen.";
@@ -21,7 +24,8 @@ async function readFromClipboardIfEmpty(textarea, statusEl) {
     }
   } catch (e) {
     console.error("Clipboard-Fehler:", e);
-    statusEl.textContent = "Fehler beim Lesen der Zwischenablage – bitte JLohn-Zeile einfügen.";
+    statusEl.textContent =
+      "Fehler beim Lesen der Zwischenablage – bitte JLohn-Zeile manuell einfügen (Ctrl+V).";
     return "";
   }
 }
@@ -36,18 +40,14 @@ async function handleFillClick() {
   const textarea = document.getElementById("jlohnInput");
   const statusEl = document.getElementById("status");
 
-  let raw = textarea.value.trim();
-  if (!raw) {
-    raw = await readFromClipboardIfEmpty(textarea, statusEl);
-  }
-  if (!raw) {
-    return;
-  }
+  let raw = (textarea.value || "").trim();
+  if (!raw) raw = await readFromClipboardIfEmpty(textarea, statusEl);
+  if (!raw) return;
 
   statusEl.textContent = "Sende Daten an aktuelle SV-Meldeportal-Seite …";
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
+    const tab = tabs && tabs[0];
     if (!tab || !tab.id) {
       statusEl.textContent = "Keine aktive Tab-ID gefunden.";
       return;
@@ -59,7 +59,7 @@ async function handleFillClick() {
         func: runSvMeldeportalJlohnAutofillFromRaw,
         args: [raw]
       },
-      (results) => {
+      () => {
         if (chrome.runtime.lastError) {
           console.error(chrome.runtime.lastError);
           statusEl.textContent = "Fehler beim Ausführen im Tab: " + chrome.runtime.lastError.message;
@@ -71,19 +71,66 @@ async function handleFillClick() {
   });
 }
 
+// Popup initialisieren
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btnClipboard")?.addEventListener("click", handleClipboardClick);
+  document.getElementById("btnFill")?.addEventListener("click", handleFillClick);
+});
+
+
+// -------------------- TAB: Autofill-Logik (nur neue JLohn-Version) --------------------
 // Diese Funktion wird IM TAB ausgeführt, nicht im Popup.
 function runSvMeldeportalJlohnAutofillFromRaw(raw) {
   (function () {
-    console.log("=== AutoFill (Extension) Start ===");
-    console.log("Raw input:", raw);
+    const LOG_PREFIX = "[SV-Autofill]";
+    const evOpts = { bubbles: true };
 
-    const values = raw
-      .split(";;")
-      .map(v => v.trim())
-      .filter(v => v !== "");
+    function fail(msg, details) {
+      console.error(LOG_PREFIX, msg, details || "");
+      alert(msg + (details ? "\n\nDetails:\n" + details : ""));
+      throw new Error(msg);
+    }
+    function info(...args) {
+      console.log(LOG_PREFIX, ...args);
+    }
 
-    console.log("Parsed values (" + values.length + "):", values);
+    // 1) erste sinnvolle Zeile auswählen (Clipboard kann mehrzeilig sein)
+    function extractJlohnLine(input) {
+      if (input == null) return "";
+      let s = String(input).replace(/^\uFEFF/, "").trim();
+      if (!s) return "";
+      const lines = s.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      return (lines.find(l => l.includes(";;")) || lines[0] || "").trim();
+    }
 
+    // 2) Tokenizer: leere Werte BEHALTEN (wichtig!)
+    function splitTokensStrict(line) {
+      let tokens = line.split(";;").map(t => t.trim());
+      while (tokens.length > 0 && tokens[tokens.length - 1] === "") tokens.pop();
+      return tokens;
+    }
+
+    // 3) Zahl normalisieren (tausenderpunkte raus, punkt->komma)
+    function normalizeNumberToPortal(val) {
+      if (val == null) return "";
+      let s = String(val).trim();
+      if (s === "") return "";
+
+      s = s.replace(/\s+/g, "");
+      const isNegative = s.startsWith("-");
+      if (isNegative) s = s.slice(1);
+
+      if (s.includes(".") && s.includes(",")) {
+        s = s.replace(/\./g, "");
+      } else if (s.includes(".") && !s.includes(",")) {
+        s = s.replace(/\./g, ",");
+      }
+
+      if (!/^\d+(?:,\d+)?$/.test(s)) return null;
+      return (isNegative ? "-" : "") + s;
+    }
+
+    // 4) Nur neues JLohn-Format: OHNE Zwischensumme
     const fieldOrder = [
       "beitrag1000",
       "beitragssatzAllgemein",
@@ -98,106 +145,76 @@ function runSvMeldeportalJlohnAutofillFromRaw(raw) {
       "beitragU1",
       "beitragU2",
       "beitrag0050",
-      "zwischensumme",
       "beitragKrankenversFreiw",
       "beitragZusatz",
       "beitragPflegeversFreiw"
     ];
 
-    console.log("Erwartete Felder (" + fieldOrder.length + "):", fieldOrder);
+    const line = extractJlohnLine(raw);
+    info("Verwendete Zeile:", line);
 
-    if (values.length !== fieldOrder.length) {
-      console.error("Anzahl Werte passt nicht zu Anzahl Felder!");
-      alert(
-        "Fehler: Anzahl Werte (" +
-          values.length +
-          ") ungleich Anzahl erwarteter Felder (" +
-          fieldOrder.length +
-          ").\nBitte JLohn-Zeile prüfen."
+    if (!line) fail("Keine JLohn-Zeile gefunden. Bitte eine gültige JLohn-Zeile einfügen.");
+    if (!line.includes(";;")) fail("Ungültiges Format: ';;' Trennzeichen nicht gefunden.");
+
+    const tokens = splitTokensStrict(line);
+    info("Tokens:", tokens.length, tokens);
+
+    // Strikt: nur neue Version (keine Zwischensumme) -> exakte Länge
+    if (tokens.length !== fieldOrder.length) {
+      fail(
+        "Fehler: Anzahl Werte passt nicht zur erwarteten Feldanzahl (neues JLohn-Format ohne Zwischensumme).",
+        `Erwartet: ${fieldOrder.length}\nErhalten: ${tokens.length}`
       );
-      console.log("=== AutoFill Ende (Fehler: Anzahl) ===");
-      return;
     }
 
-    const inputs = fieldOrder.map(name =>
-      document.querySelector('input[name="' + name + '"]')
-    );
+    // Inputs suchen
+    const inputs = fieldOrder.map(name => document.querySelector(`input[name="${name}"]`));
+    const missing = [];
+    inputs.forEach((el, i) => { if (!el) missing.push(fieldOrder[i]); });
 
-    const missingNames = [];
-    const foundInputs = [];
+    // zwischensumme darf existieren, wird aber ignoriert
+    const zw = document.querySelector(`input[name="zwischensumme"]`);
+    if (zw) info("Hinweis: zwischensumme existiert im Formular, wird bewusst nicht befüllt.");
 
-    inputs.forEach((el, idx) => {
-      if (!el) {
-        missingNames.push(fieldOrder[idx]);
-      } else {
-        foundInputs.push(el);
-      }
+    if (missing.length) {
+      fail(
+        "Fehler: Nicht alle erwarteten Felder wurden im Formular gefunden. Bist du auf der Beitragsmaske?",
+        missing.join(", ")
+      );
+    }
+
+    // Validieren & normalisieren
+    const normalized = tokens.map((t, idx) => {
+      const n = normalizeNumberToPortal(t);
+      if (n === null) return { ok: false, idx, field: fieldOrder[idx], raw: t };
+      return { ok: true, value: n };
     });
 
-    console.log(
-      "Gefundene passende Input-Felder im DOM (" + foundInputs.length + "):",
-      foundInputs
-    );
-    console.log(
-      "Gefundene Feldnamen im DOM:",
-      foundInputs.map(el => el.name)
-    );
-
-    if (missingNames.length > 0) {
-      console.error("Nicht gefundene Felder im DOM:", missingNames);
-      alert(
-        "Fehler: Folgende Felder wurden im Formular nicht gefunden:\n" +
-          missingNames.join(", ") +
-          "\n\nBist du auf der richtigen Seite (Beitragsmaske)?"
+    const invalids = normalized.filter(x => !x.ok);
+    if (invalids.length) {
+      fail(
+        "Fehler: Mindestens ein Wert ist nicht numerisch interpretierbar.",
+        invalids.map(x => `#${x.idx} ${x.field}: "${x.raw}"`).join("\n")
       );
-      console.log("=== AutoFill Ende (Fehler: Felder fehlen) ===");
-      return;
     }
 
-    const evOpts = { bubbles: true };
+    // Befüllen
+    for (let i = 0; i < fieldOrder.length; i++) {
+      const el = inputs[i];
+      const name = fieldOrder[i];
+      const val = normalized[i].value;
 
-    fieldOrder.forEach((name, idx) => {
-      const el = inputs[idx];
-      if (!el) return;
-
-      let val = values[idx];
-
-      console.log("→ Verarbeite Feld #" + idx + " (" + name + ")");
-      console.log("DOM-Element:", el);
-      console.log("   Sollwert =", JSON.stringify(val));
-
-      if (el.readOnly || el.hasAttribute("readonly")) {
-        console.log("   Feld ist readonly – wird übersprungen.");
-        return;
-      }
-      if (el.disabled) {
-        console.log("   Feld ist disabled – wird übersprungen.");
-        return;
-      }
-
-      if (typeof val === "string" && val.includes(".")) {
-        val = val.replace(/\./g, ",");
-      }
-
-      const numericLike = /^-?\d+(?:[\.,]\d+)?$/;
-      if (numericLike.test(val)) {
-        val = val.trim();
+      if (el.readOnly || el.hasAttribute("readonly") || el.disabled) {
+        info(`${name} ist readonly/disabled – übersprungen.`);
+        continue;
       }
 
       el.focus();
       el.value = val;
-      console.log("   Eingetragen! input.value =", JSON.stringify(el.value));
       el.dispatchEvent(new Event("input", evOpts));
       el.dispatchEvent(new Event("change", evOpts));
-      console.log("   Events ausgelöst: input + change");
-    });
+    }
 
-    console.log("=== AutoFill (Extension) Ende ===");
-    alert("SV-Meldeportal-Felder wurden aus JLohn-Zeile befüllt.");
+    alert("SV-Meldeportal-Felder wurden aus der JLohn-Zeile (neues Format) befüllt.");
   })();
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnClipboard").addEventListener("click", handleClipboardClick);
-  document.getElementById("btnFill").addEventListener("click", handleFillClick);
-});
