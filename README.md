@@ -1,7 +1,7 @@
 # SV-Meldeportal JLohn Autofill
 
 Cross-browser (Chrome, Edge, Firefox) extension that autofills contribution fields in the German **SV-Meldeportal**
-from a **JLohn export line**.
+from a **JLohn export line** ([JLohn](https://www.jlohn.de/wordpress/)).
 
 ## Screenshots
 
