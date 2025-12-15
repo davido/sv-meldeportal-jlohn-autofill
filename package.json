@@ -1,0 +1,25 @@
+{
+  "name": "sv-meldeportal-jlohn-autofill",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint \"src/**/*.js\" \"tests/**/*.js\" -f stylish && echo \"✅ ESLint: 0 problems\"",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"*.md\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"*.md\" \"docs/**/*.md\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.15",
+    "archiver": "^6.0.2",
+    "esbuild": "^0.27.1",
+    "eslint": "^9.8.0",
+    "globals": "^15.9.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.3.3",
+    "vitest": "^4.0.15"
+  }
+}

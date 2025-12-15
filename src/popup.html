@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>SV-Meldeportal JLohn Autofill</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; margin: 8px; min-width: 340px; max-width: 420px; }
+    h1 { font-size: 16px; margin: 0 0 6px; }
+    p, label { font-size: 12px; margin: 6px 0 4px; display: block; }
+    textarea { width: 100%; min-height: 72px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid #ccc; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    button { padding: 6px 10px; font-size: 12px; cursor: pointer; border-radius: 8px; border: 1px solid #bbb; background: #f7f7f7; }
+    button:hover { background: #efefef; }
+    .secondary { background: #fff; }
+    .secondary:hover { background: #f5f5ff; }
+    #status { margin-top: 8px; font-size: 11px; white-space: pre-wrap; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; }
+    #status.info { background: #f5f5f5; border-color: #e0e0e0; color: #333; }
+    #status.ok { background: #e8f7ec; border-color: #1f8a3b; color: #1f6d33; }
+    #status.error { background: #fdeaea; border-color: #c62828; color: #8e1b1b; }
+    .hint { font-size: 11px; color: #666; margin-top: 2px; }
+    .divider { margin: 10px 0; border-top: 1px solid #e5e5e5; }
+  </style>
+</head>
+<body>
+  <h1>SV-Meldeportal &amp; JLohn</h1>
+
+  <label for="jlohnInput"><strong>1) Positional JLohn-Zeile</strong> (z. B. „511,00;;17,89;;…“)</label>
+  <textarea id="jlohnInput" placeholder="511,00;;17,89;;0,00;;17,29;;115,16;;651,00;;0,00;;91,00;;0,00;;147,00;;87,50;;11,90;;5,25;;;0,00;;0,00;;0,00;;"></textarea>
+  <div class="hint">Hinweis: „;;;“ wird als leeres Feld interpretiert.</div>
+
+  <div class="row">
+    <button id="btnClipboard" type="button">Aus Zwischenablage holen</button>
+    <button id="btnFill" type="button">SV-Meldeportal befüllen</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <label for="keyedInput"><strong>2) Keyed FeldInput</strong> (feld:wert;;feld:wert;;…)</label>
+  <textarea id="keyedInput" placeholder="beitrag1000:511,00;;beitragssatzAllgemein:17,89;;beitragZusatzKrankenvers:115,16;;…"></textarea>
+  <div class="hint">Dieses Format ist robuster, da es nicht von Positionen abhängt.</div>
+
+  <div class="row">
+    <button id="btnTransform" type="button" class="secondary">Positional → Keyed transformieren</button>
+    <button id="btnFillKeyed" type="button" class="secondary">Keyed befüllen</button>
+  </div>
+
+  <p id="status"></p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

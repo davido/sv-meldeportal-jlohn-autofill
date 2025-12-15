@@ -1,51 +1,102 @@
-# SV-Meldeportal JLohn Autofill – Browser‑Erweiterung
+# SV-Meldeportal JLohn Autofill
 
-Dieses Projekt stellt eine **Firefox‑Browser‑Erweiterung** bereit, die automatisch die Beitragsfelder im **SV‑Meldeportal** anhand einer **JLohn‑Zeile** ausfüllt.
+Cross-browser (Chrome, Edge, Firefox) extension that autofills contribution fields in the German **SV-Meldeportal**
+from a **JLohn export line**.
 
----
+## Features
 
-## ✨ Funktionen
+- Popup UI with **positional** JLohn input and **keyed** format (`field:value;;field:value`)
+- Optional clipboard import (**only after explicit user click**)
+- Autofill triggers `input`/`change`/`blur` events so frameworks react correctly
+- **Offline-only** (no telemetry, no network calls)
 
-- Öffnet ein Popup mit Eingabefeld für die JLohn‑Zeile  
-- Optional: Lesen der JLohn‑Zeile **direkt aus der Zwischenablage**  
-- Automatisches Matching der Werte zu den korrekten Formularfeldern im SV‑Meldeportal  
-- Validierung der Anzahl der Werte  
-- Automatische Events (`input`, `change`), damit Angular/Material‑Formulare korrekt reagieren  
-- Praktisches Toolbar‑Icon für schnellen Zugriff  
-- Komplett **offline**, keine Datenübertragung an Server
+## Permissions (store review friendly)
 
----
+| Permission         | Why it is needed                                         | When it is used                               |
+| ------------------ | -------------------------------------------------------- | --------------------------------------------- |
+| `activeTab`        | Access the active SV-Meldeportal tab after a user action | Only after clicking **Fill**                  |
+| `scripting`        | Inject the content script on demand into the active tab  | Only after clicking **Fill**                  |
+| `clipboardRead`    | Read JLohn line from clipboard                           | Only after clicking **Import from clipboard** |
+| `host_permissions` | Restrict script injection to `sv-meldeportal.de`         | Only for matching SV pages                    |
 
-## 📦 Inhalt des Erweiterungs‑Ordners
+**Data handling:** No data is transmitted. Processing happens locally in the browser.
 
-- manifest.json
-- popup.html
-- popup.js
-- icons/icon16.png
-- icons/icon32.png
-- icons/icon48.png
+## Project structure
 
----
+- `src/popup/*` – popup UI logic
+- `src/content/*` – content script that fills the form
+- `src/shared/*` – pure helpers (transform, number normalization, field list)
+- `tests/*` – unit tests (Vitest + JSDOM)
+- `.github/workflows/ci.yml` – GitHub Actions CI (format check + lint + tests + build)
+- `docs/store-listing.md` – store-ready listing texts
 
-## 🔧 Installation (Firefox)
+## Commands
 
-1. Lade die XPI-Date: https://addons.mozilla.org/en-GB/firefox/addon/sv-meldeportal-jlohn-autofill/
-2. Klick install button.
+### Install
 
----
+```bash
+npm install
+```
 
-## 🚀 Nutzung
+### Format
 
-1. Auf eine SV‑Meldeportal‑Beitragsseite gehen.  
-2. Toolbar‑Icon klicken → Popup öffnet sich.  
-3. JLohn‑Zeile einfügen oder aus der Zwischenablage übernehmen.  
-4. Button **„SV‑Meldeportal befüllen“** drücken.  
-5. Alle relevanten Felder werden automatisch ausgefüllt.
+```bash
+npm run format
+npm run format:check
+```
 
----
+### Lint
 
-## ⚖️ Lizenz
+```bash
+npm run lint
+```
 
-Dieses Projekt steht unter der **Apache License 2.0**.  
-Siehe Datei `LICENSE` oder:  
-https://www.apache.org/licenses/LICENSE-2.0
+### Tests
+
+```bash
+npm test
+npm run test:watch
+npm run test:coverage
+Coverage output in coverage/.
+```
+
+### Build (release)
+
+```bash
+npm run build
+Outputs:
+dist/chrome/ and dist/sv-autofill-<version>-chrome-edge.zip
+dist/firefox/ and dist/sv-autofill-<version>-firefox.zip
+dist/sv-autofill-<version>-full-project.zip
+```
+
+### Debugging
+
+Set localStorage.SV_AUTOFILL_DEBUG = "1" in popup DevTools or page DevTools.
+
+## Review FAQ (store reviewers)
+
+#### Does this extension collect or transmit personal data?
+
+No. The extension does not send any data to servers. All parsing and form filling happens locally in the browser.
+
+#### Why does it request clipboardRead?
+
+Used only after the user clicks Import from clipboard in the popup.
+
+#### Why activeTab and scripting?
+
+Used only to inject/run the content script in the active SV-Meldeportal tab after clicking Fill.
+
+#### What sites can it run on?
+
+Restricted to sv-meldeportal.de via host permissions.
+
+#### Why are there multiple config files?
+
+build.mjs builds the extension and creates ZIP files.
+vitest.config.js configures unit tests + coverage.
+
+## License
+
+Apache License 2.0 – see LICENSE.
