@@ -3,10 +3,24 @@
 Cross-browser (Chrome, Edge, Firefox) extension that autofills contribution fields in the German **SV-Meldeportal**
 from a **JLohn export line**.
 
+## Screenshots
+
+Popup workflow (examples):
+
+| Positional + Keyed input                                          | Clipboard import status                                                       |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| ![Popup: positional and keyed input](screenshots/popup-empty.png) | ![Popup: clipboard imported status](screenshots/popup-clipboard-imported.png) |
+
+| Positional → Keyed transformation                                                                | Keyed fill result                                          |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| ![Popup: transformed positional to keyed](screenshots/popup-transformed-positional-to-keyed.png) | ![Popup: keyed filled](screenshots/popup-keyed-filled.png) |
+
 ## Features
 
 - Popup UI with **positional** JLohn input and **keyed** format (`field:value;;field:value`)
 - Optional clipboard import (**only after explicit user click**)
+- Optional transformation **positional → keyed** (keeps only fillable values, excluding `0,00`)
+- Status line in popup (clipboard imported / transformed / filled result)
 - Autofill triggers `input`/`change`/`blur` events so frameworks react correctly
 - **Offline-only** (no telemetry, no network calls)
 
@@ -64,15 +78,16 @@ Coverage output in coverage/.
 
 ```bash
 npm run build
+
 Outputs:
-dist/chrome/ and dist/sv-autofill-<version>-chrome-edge.zip
-dist/firefox/ and dist/sv-autofill-<version>-firefox.zip
-dist/sv-autofill-<version>-full-project.zip
+dist/chrome/ and dist/sv-meldeportal-jlohn-autofill-<version>-chrome-edge.zip
+dist/firefox/ and dist/sv-meldeportal-jlohn-autofill-<version>-firefox.zip
+dist/sv-meldeportal-jlohn-autofill-<version>-full-project.zip
 ```
 
 ### Debugging
 
-Set localStorage.SV_AUTOFILL_DEBUG = "1" in popup DevTools or page DevTools.
+Set `localStorage.SV_AUTOFILL_DEBUG = "1"` in popup DevTools or page DevTools.
 
 ## Review FAQ (store reviewers)
 
