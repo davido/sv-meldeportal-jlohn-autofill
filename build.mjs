@@ -27,7 +27,6 @@ function deepMerge(a, b) {
 }
 
 async function bundle(outDir) {
-  // Store-friendly: no sourcemaps, no minification.
   await esbuild.build({
     entryPoints: {
       popup: "src/popup/popup.js",
@@ -40,7 +39,6 @@ async function bundle(outDir) {
     sourcemap: false,
     minify: false,
     outdir: outDir,
-    // IMPORTANT: esbuild adds ".js" automatically; don't include it here
     entryNames: "[name]"
   });
 }
@@ -53,18 +51,25 @@ function copyStatic(outDir) {
 function writeManifest(outDir, target) {
   const base = readJson("src/manifest.base.json");
   const targetJson = readJson(
-    target === "firefox" ? "src/manifest.firefox.json" : "src/manifest.chrome.json"
+    target === "firefox"
+      ? "src/manifest.firefox.json"
+      : "src/manifest.chrome.json"
   );
   const merged = deepMerge(base, targetJson);
-  writeFileSync(join(outDir, "manifest.json"), JSON.stringify(merged, null, 2));
+  writeFileSync(
+    join(outDir, "manifest.json"),
+    JSON.stringify(merged, null, 2)
+  );
 }
 
 async function zipDir(srcDir, zipPath) {
   await new Promise((resolve, reject) => {
     const output = createWriteStream(zipPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
+
     output.on("close", resolve);
     archive.on("error", reject);
+
     archive.pipe(output);
     archive.directory(srcDir, false);
     archive.finalize();
@@ -74,6 +79,7 @@ async function zipDir(srcDir, zipPath) {
 async function buildTarget(target) {
   const outDir = join("dist", target);
   mkdirSync(outDir, { recursive: true });
+
   await bundle(outDir);
   copyStatic(outDir);
   writeManifest(outDir, target);
@@ -83,14 +89,28 @@ async function main() {
   rmSync("dist", { recursive: true, force: true });
   mkdirSync("dist", { recursive: true });
 
-  const version = readJson("src/manifest.base.json").version;
+  const manifest = readJson("src/manifest.base.json");
+  const version = manifest.version;
 
-  await buildTarget("chrome"); // Chrome + Edge
-  await buildTarget("firefox"); // AMO
+  const artifactBaseName = "sv-meldeportal-jlohn-autofill";
 
-  await zipDir("dist/chrome", `dist/sv-autofill-${version}-chrome-edge.zip`);
-  await zipDir("dist/firefox", `dist/sv-autofill-${version}-firefox.zip`);
-  await zipDir(".", `dist/sv-autofill-${version}-full-project.zip`);
+  await buildTarget("chrome");
+  await buildTarget("firefox");
+
+  await zipDir(
+    "dist/chrome",
+    `dist/${artifactBaseName}-${version}-chrome-edge.zip`
+  );
+
+  await zipDir(
+    "dist/firefox",
+    `dist/${artifactBaseName}-${version}-firefox.zip`
+  );
+
+  await zipDir(
+    ".",
+    `dist/${artifactBaseName}-${version}-full-project.zip`
+  );
 
   console.log("✅ Build done.");
 }
