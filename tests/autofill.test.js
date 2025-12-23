@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { FIELD_ORDER } from "../src/shared/fields.js";
-import { extractRelevantLine, parseKeyedToMap, runAutofillFromRaw } from "../src/content/autofill.js";
+import {
+  extractRelevantLine,
+  parseKeyedToMap,
+  runAutofillFromRaw
+} from "../src/content/autofill.js";
 
 function makeDocWithInputs() {
   const doc = document.implementation.createHTMLDocument("test");
@@ -114,4 +118,3 @@ describe("runAutofillFromRaw (jsdom, keyed-only)", () => {
     expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
   });
 });
-

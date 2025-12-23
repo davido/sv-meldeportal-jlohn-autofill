@@ -7,7 +7,9 @@ import { normalizeNumberToPortal, isZeroValue } from "../shared/number.js";
  */
 export function extractRelevantLine(input) {
   if (input == null) return "";
-  const s0 = String(input).replace(/^\uFEFF/, "").trim();
+  const s0 = String(input)
+    .replace(/^\uFEFF/, "")
+    .trim();
   if (!s0) return "";
 
   const lines = s0
@@ -140,4 +142,3 @@ export function runAutofillFromRaw(raw, doc = document, { debug = false } = {}) 
 
   return applyValuesToDocument(doc, values, { debug });
 }
-
