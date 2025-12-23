@@ -38,7 +38,7 @@ export function parseKeyedToMap(line) {
     .filter(Boolean);
 
   for (let p of parts) {
-    // ✅ tolerate ';;;': remove leftover leading ';' from tokens like ';beitragX:123'
+    // tolerate ';;;': remove leftover leading ';' from tokens like ';beitragX:123'
     p = p.replace(/^;+/, "").trim();
 
     const idx = p.indexOf(":");
@@ -65,7 +65,7 @@ export function findInputsByName(doc) {
  * Skips empty/zero/readonly/disabled fields.
  * Counts skipped zero values (0,00) for JLohn/AutoHotKey compatibility.
  */
-export function applyValuesToDocument(doc, valuesMap) {
+export function applyValuesToDocument(doc, valuesMap, { debug = false } = {}) {
   const evOpts = { bubbles: true };
   const inputsByName = new Map(
     FIELD_ORDER.map((f) => [f, doc.querySelector(`input[name="${f}"]`)])
@@ -73,7 +73,7 @@ export function applyValuesToDocument(doc, valuesMap) {
 
   const missing = FIELD_ORDER.filter((f) => !inputsByName.get(f));
   if (missing.length) {
-    dbg(LOG_PREFIX, "missing fields", missing);
+    dbg(debug, LOG_PREFIX, "missing fields", missing);
     return {
       ok: false,
       message: "Not all expected fields were found.",
@@ -84,12 +84,12 @@ export function applyValuesToDocument(doc, valuesMap) {
   let applied = 0;
   let skippedZero = 0;
 
-  const g = dbgGroup(LOG_PREFIX, "apply");
+  const g = dbgGroup(debug, LOG_PREFIX, "apply");
 
   for (const [name, rawVal] of valuesMap.entries()) {
     const el = inputsByName.get(name);
     if (!el) {
-      dbg(LOG_PREFIX, "ignore unknown key", name);
+      dbg(debug, LOG_PREFIX, "ignore unknown key", name);
       continue;
     }
 
@@ -98,12 +98,12 @@ export function applyValuesToDocument(doc, valuesMap) {
 
     if (isZeroValue(normalized)) {
       skippedZero++;
-      dbg(LOG_PREFIX, "skip zero", name);
+      dbg(debug, LOG_PREFIX, "skip zero", name);
       continue;
     }
 
     if (el.readOnly || el.disabled) {
-      dbg(LOG_PREFIX, "skip readonly", name);
+      dbg(debug, LOG_PREFIX, "skip readonly", name);
       continue;
     }
 
@@ -113,14 +113,13 @@ export function applyValuesToDocument(doc, valuesMap) {
     el.dispatchEvent(new Event("blur", evOpts));
 
     applied++;
-    dbg(LOG_PREFIX, "set", name, normalized);
+    dbg(debug, LOG_PREFIX, "set", name, normalized);
   }
 
-  if (g) dbgGroupEnd();
+  if (g) dbgGroupEnd(debug);
 
-  // ⭐ NEW: compact summary log
-  // shows exactly: [SV-Autofill] summary { applied: 10, skippedZero: 6 }
-  dbg(LOG_PREFIX, "summary", `{ applied: ${applied}, skippedZero: ${skippedZero} }`);
+  // Summary log (only if debug=true)
+  dbg(debug, LOG_PREFIX, "summary", `{ applied: ${applied}, skippedZero: ${skippedZero} }`);
 
   return {
     ok: true,

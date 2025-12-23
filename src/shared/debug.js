@@ -1,28 +1,22 @@
-const DEBUG_KEY = "SV_AUTOFILL_DEBUG";
+// shared/debug.js
+// Debug helper functions that are controlled ONLY by an explicit boolean.
+// (No localStorage here → avoids popup/page storage mismatch.)
 
-export function isDebugEnabled() {
-  try {
-    return localStorage.getItem(DEBUG_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function dbg(prefix, ...args) {
-  if (!isDebugEnabled()) return;
+export function dbg(debug, prefix, ...args) {
+  if (!debug) return;
   // eslint-disable-next-line no-console
   console.log(prefix, ...args);
 }
 
-export function dbgGroup(prefix, title) {
-  if (!isDebugEnabled()) return false;
+export function dbgGroup(debug, prefix, title) {
+  if (!debug) return false;
   // eslint-disable-next-line no-console
   console.groupCollapsed(`${prefix} ${title}`);
   return true;
 }
 
-export function dbgGroupEnd() {
-  if (!isDebugEnabled()) return;
+export function dbgGroupEnd(debug) {
+  if (!debug) return;
   // eslint-disable-next-line no-console
   console.groupEnd();
 }
