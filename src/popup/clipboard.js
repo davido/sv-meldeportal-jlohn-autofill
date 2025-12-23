@@ -5,25 +5,25 @@ export async function readFromClipboardIfEmpty(textarea) {
   if (txt) return txt;
 
   if (!navigator.clipboard?.readText) {
-    setStatus("Clipboard API not available – please paste manually (Ctrl+V).", "error");
+    setStatus("Zwischenablage nicht verfügbar – bitte manuell einfügen (Strg+V).", "error");
     return "";
   }
 
   try {
-    setStatus("Reading clipboard …", "info");
+    setStatus("Lese Zwischenablage …", "info");
     txt = ((await navigator.clipboard.readText()) || "").trim();
 
     if (txt) {
       textarea.value = txt;
-      setStatus("Clipboard imported.", "ok");
+      setStatus("Zwischenablage übernommen.", "ok");
       return txt;
     }
 
-    setStatus("Clipboard is empty – please paste a JLohn line.", "error");
+    setStatus("Zwischenablage ist leer – bitte Feld-Input kopieren (feld:wert;;…).", "error");
     return "";
   } catch (e) {
-    console.error("Clipboard error:", e);
-    setStatus("Clipboard read failed – please paste manually.", "error");
+    console.error("Clipboard-Fehler:", e);
+    setStatus("Zugriff auf die Zwischenablage fehlgeschlagen – bitte manuell einfügen.", "error");
     return "";
   }
 }

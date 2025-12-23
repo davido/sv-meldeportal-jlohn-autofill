@@ -3,8 +3,6 @@ import { FIELD_ORDER } from "../src/shared/fields.js";
 import {
   extractRelevantLine,
   parseKeyedToMap,
-  splitTokens,
-  mapPositionalToFields,
   runAutofillFromRaw
 } from "../src/content/autofill.js";
 
@@ -20,10 +18,15 @@ function makeDocWithInputs() {
   return doc;
 }
 
-describe("content/autofill helpers", () => {
-  it("extractRelevantLine picks a meaningful line", () => {
-    const raw = "hello\n511,00;;17,89;;\nbye";
-    expect(extractRelevantLine(raw)).toBe("511,00;;17,89;;");
+describe("content/autofill helpers (keyed-only)", () => {
+  it("extractRelevantLine prefers a line containing ':'", () => {
+    const raw = "hello\nbeitrag1000:10,00;;beitragU1:5,00\nbye";
+    expect(extractRelevantLine(raw)).toBe("beitrag1000:10,00;;beitragU1:5,00");
+  });
+
+  it("extractRelevantLine falls back to first non-empty line", () => {
+    const raw = "  \nfoo\nbar";
+    expect(extractRelevantLine(raw)).toBe("foo");
   });
 
   it("parseKeyedToMap parses field:value pairs", () => {
@@ -32,35 +35,35 @@ describe("content/autofill helpers", () => {
     expect(m.get("b")).toBe("2");
   });
 
-  it("splitTokens treats ';;;' like ';;' (ignores extra ';')", () => {
-    expect(splitTokens("1;;;2")).toEqual(["1", "2"]);
-  });
-
-  it("mapPositionalToFields pads to FIELD_ORDER length", () => {
-    const r = mapPositionalToFields(["1", "2"]);
-    expect(r.ok).toBe(true);
-    expect(r.values.get(FIELD_ORDER[0])).toBe("1");
-    expect(r.values.get(FIELD_ORDER[1])).toBe("2");
-    expect(r.values.get(FIELD_ORDER[2])).toBe("");
+  it("parseKeyedToMap ignores invalid parts", () => {
+    const m = parseKeyedToMap("a:1;;invalid;;:nope;;b:2;;");
+    expect(m.get("a")).toBe("1");
+    expect(m.get("b")).toBe("2");
+    expect(m.has("invalid")).toBe(false);
   });
 });
 
-describe("runAutofillFromRaw (jsdom)", () => {
-  it("fills fields from positional input", () => {
-    const doc = makeDocWithInputs();
-    const r = runAutofillFromRaw("511,00;;17,89;;0,00;;", doc);
-    expect(r.ok).toBe(true);
-    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("511,00");
-    expect(doc.querySelector('input[name="beitragssatzAllgemein"]').value).toBe("17,89");
-    expect(doc.querySelector('input[name="beitrag3000"]').value).toBe("");
-  });
-
+describe("runAutofillFromRaw (jsdom, keyed-only)", () => {
   it("fills fields from keyed input", () => {
     const doc = makeDocWithInputs();
     const r = runAutofillFromRaw("beitrag1000:10,00;;beitragU1:5,00", doc);
     expect(r.ok).toBe(true);
     expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("10,00");
     expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
+
+  it("ignores unknown keys", () => {
+    const doc = makeDocWithInputs();
+    const r = runAutofillFromRaw("unknownField:99,99;;beitrag1000:10,00", doc);
+    expect(r.ok).toBe(true);
+    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("10,00");
+  });
+
+  it("fails if input is not keyed format", () => {
+    const doc = makeDocWithInputs();
+    const r = runAutofillFromRaw("511,00;;17,89;;", doc);
+    expect(r.ok).toBe(false);
+    expect(String(r.message)).toContain("Invalid format");
   });
 
   it("fails if required fields are missing", () => {
@@ -71,13 +74,6 @@ describe("runAutofillFromRaw (jsdom)", () => {
     expect(String(r.message)).toContain("Not all expected fields");
   });
 
-  it("rejects non-numeric positional value", () => {
-    const doc = makeDocWithInputs();
-    const r = runAutofillFromRaw("abc;;17,89;;", doc);
-    expect(r.ok).toBe(false);
-    expect(String(r.message)).toContain("Non-numeric");
-  });
-
   it("skips readonly fields", () => {
     const doc = makeDocWithInputs();
     const el = doc.querySelector('input[name="beitrag1000"]');
@@ -85,6 +81,27 @@ describe("runAutofillFromRaw (jsdom)", () => {
     const r = runAutofillFromRaw("beitrag1000:10,00;;beitragU1:5,00", doc);
     expect(r.ok).toBe(true);
     expect(el.value).toBe("");
+    expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
+
+  it("skips zero values and counts skippedZeroCount", () => {
+    const doc = makeDocWithInputs();
+    const r = runAutofillFromRaw("beitrag1000:0.00;;beitragU1:5.00", doc);
+
+    expect(r.ok).toBe(true);
+    expect(r.appliedCount).toBe(1);
+    expect(r.skippedZeroCount).toBe(1);
+
+    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("");
+    expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
+
+  it("skips non-numeric values (normalize returns null)", () => {
+    const doc = makeDocWithInputs();
+    const r = runAutofillFromRaw("beitrag1000:abc;;beitragU1:5,00", doc);
+    expect(r.ok).toBe(true);
+    // beitrag1000 is ignored, beitragU1 is filled
+    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("");
     expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
   });
 });

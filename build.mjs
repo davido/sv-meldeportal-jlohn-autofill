@@ -48,71 +48,77 @@ function copyStatic(outDir) {
   cpSync("src/icons", join(outDir, "icons"), { recursive: true });
 }
 
-function writeManifest(outDir, target) {
+function writeManifest(outDir, target, version) {
   const base = readJson("src/manifest.base.json");
   const targetJson = readJson(
-    target === "firefox"
-      ? "src/manifest.firefox.json"
-      : "src/manifest.chrome.json"
+    target === "firefox" ? "src/manifest.firefox.json" : "src/manifest.chrome.json"
   );
+
   const merged = deepMerge(base, targetJson);
-  writeFileSync(
-    join(outDir, "manifest.json"),
-    JSON.stringify(merged, null, 2)
-  );
+
+  // ✅ Single source of truth: package.json version
+  merged.version = version;
+
+  writeFileSync(join(outDir, "manifest.json"), JSON.stringify(merged, null, 2));
 }
 
-async function zipDir(srcDir, zipPath) {
+async function zipDir(srcDir, zipPath, { ignore = [] } = {}) {
   await new Promise((resolve, reject) => {
     const output = createWriteStream(zipPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
 
     output.on("close", resolve);
+    output.on("error", reject);
+
+    archive.on("warning", (err) => {
+      // Keep build running on non-fatal warnings (e.g., missing optional files)
+      console.warn("zip warning:", err);
+    });
     archive.on("error", reject);
 
     archive.pipe(output);
-    archive.directory(srcDir, false);
+
+    // Use glob + ignore instead of directory() to avoid self-including zips
+    archive.glob("**/*", {
+      cwd: srcDir,
+      dot: true,
+      ignore: ["**/.DS_Store", ...ignore]
+    });
+
     archive.finalize();
   });
 }
 
-async function buildTarget(target) {
+async function buildTarget(target, version) {
   const outDir = join("dist", target);
   mkdirSync(outDir, { recursive: true });
 
   await bundle(outDir);
   copyStatic(outDir);
-  writeManifest(outDir, target);
+  writeManifest(outDir, target, version);
 }
 
 async function main() {
   rmSync("dist", { recursive: true, force: true });
   mkdirSync("dist", { recursive: true });
 
-  const manifest = readJson("src/manifest.base.json");
-  const version = manifest.version;
+  // ✅ Single source of truth
+  const pkg = readJson("package.json");
+  const version = pkg.version;
+  const artifactBaseName = pkg.name || "sv-meldeportal-jlohn-autofill";
 
-  const artifactBaseName = "sv-meldeportal-jlohn-autofill";
+  await buildTarget("chrome", version);
+  await buildTarget("firefox", version);
 
-  await buildTarget("chrome");
-  await buildTarget("firefox");
+  await zipDir("dist/chrome", `dist/${artifactBaseName}-${version}-chrome-edge.zip`);
+  await zipDir("dist/firefox", `dist/${artifactBaseName}-${version}-firefox.zip`);
 
-  await zipDir(
-    "dist/chrome",
-    `dist/${artifactBaseName}-${version}-chrome-edge.zip`
-  );
+  // Full project zip (exclude dist + huge folders)
+  await zipDir(".", `dist/${artifactBaseName}-${version}-full-project.zip`, {
+    ignore: ["dist/**", "node_modules/**", ".git/**"]
+  });
 
-  await zipDir(
-    "dist/firefox",
-    `dist/${artifactBaseName}-${version}-firefox.zip`
-  );
-
-  await zipDir(
-    ".",
-    `dist/${artifactBaseName}-${version}-full-project.zip`
-  );
-
-  console.log("✅ Build done.");
+  console.log(`✅ Build done (${artifactBaseName}@${version}).`);
 }
 
 main().catch((e) => {

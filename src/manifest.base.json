@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SV-Meldeportal JLohn Autofill",
-  "version": "2.3.0",
+  "version": "0.0.0",
   "description": "Fills SV-Meldeportal contribution fields from a JLohn export line (popup + optional clipboard).",
   "permissions": ["scripting", "activeTab", "clipboardRead"],
   "host_permissions": ["*://*.sv-meldeportal.de/*", "*://sv-meldeportal.de/*"],

@@ -4,15 +4,22 @@ function getActiveTab() {
   });
 }
 
+function executeContentScript(tabId) {
+  return new Promise((resolve) => {
+    chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, () => {
+      const err = chrome.runtime.lastError;
+      if (err) return resolve({ ok: false, message: err.message || "executeScript failed" });
+      resolve({ ok: true });
+    });
+  });
+}
+
 export async function runInActiveTab(payload) {
   const tab = await getActiveTab();
   if (!tab?.id) return { ok: false, message: "No active tab found." };
 
-  await new Promise((resolve) => {
-    chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] }, () =>
-      resolve()
-    );
-  });
+  const inj = await executeContentScript(tab.id);
+  if (!inj.ok) return inj;
 
   return await new Promise((resolve) => {
     chrome.tabs.sendMessage(tab.id, { type: "SV_AUTOFILL_RUN", payload }, (resp) => {

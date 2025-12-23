@@ -12,7 +12,8 @@ export function clearStatus() {
 }
 
 export function setBusy(isBusy) {
-  for (const id of ["btnClipboard", "btnFill", "btnTransform", "btnFillKeyed"]) {
+  // keyed-only popup buttons
+  for (const id of ["btnClipboard", "btnFillKeyed"]) {
     const btn = document.getElementById(id);
     if (btn) btn.disabled = !!isBusy;
   }

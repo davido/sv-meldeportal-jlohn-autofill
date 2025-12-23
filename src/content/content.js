@@ -11,6 +11,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const raw = msg?.payload?.raw ?? "";
     const debug = msg?.payload?.debug === true;
 
+    // keyed-only: runAutofillFromRaw expects field:value;;field:value...
     const result = runAutofillFromRaw(raw, document, { debug });
     sendResponse(result);
   } catch (e) {
