@@ -33,7 +33,7 @@ git status -sb
 chmod +x release.sh
 ```
 
-## Run a release (example: 1.0.0)
+## Run a release (example: 2.7.0)
 
 ```bash
 ./release.sh 2.7.0
