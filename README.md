@@ -1,116 +1,172 @@
 # SV-Meldeportal JLohn Autofill
 
-Cross-browser (Chrome, Edge, Firefox) extension that autofills contribution fields in the German **SV-Meldeportal**
-from a **JLohn export line** ([JLohn](https://www.jlohn.de/wordpress/)).
+Cross-browser (Chrome, Edge, Firefox) extension that autofills contribution fields
+in the German **SV-Meldeportal** from **keyed JLohn field data**
+([JLohn](https://www.jlohn.de/wordpress/)).
+
+The extension fills values into the official SV-Meldeportal form and triggers
+the required browser events so the portal reacts correctly.
 
 ## Screenshots
 
 Popup workflow (examples):
 
-| Positional + Keyed input                                          | Clipboard import status                                                       |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| ![Popup: positional and keyed input](screenshots/popup-empty.png) | ![Popup: clipboard imported status](screenshots/popup-clipboard-imported.png) |
+**Leeres Popup**
 
-| Positional → Keyed transformation                                                                | Keyed fill result                                          |
-| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| ![Popup: transformed positional to keyed](screenshots/popup-transformed-positional-to-keyed.png) | ![Popup: keyed filled](screenshots/popup-keyed-filled.png) |
+![Leeres Popup](screenshots/popup-empty.png)
+
+**Zwischenablage importiert**
+
+![Zwischenablage importiert](screenshots/popup-clipboard-imported.png)
+
+**Erfolgreich befüllt**
+
+![Erfolgreich befüllt](screenshots/popup-keyed-filled.png)
 
 ## Features
 
-- Popup UI with **positional** JLohn input and **keyed** format (`field:value;;field:value`)
-- Optional clipboard import (**only after explicit user click**)
-- Optional transformation **positional → keyed** (keeps only fillable values, excluding `0,00`)
-- Status line in popup (clipboard imported / transformed / filled result)
-- Autofill triggers `input`/`change`/`blur` events so frameworks react correctly
-- **Offline-only** (no telemetry, no network calls)
+- Popup UI for **keyed field input**
+  (`feld:wert;;feld:wert;;…`)
+- Optional clipboard import (only after explicit user click)
+- Automatically fills matching SV-Meldeportal form fields
+- Skips `0,00` values (required for JLohn / AutoHotKey compatibility)
+- Status message shows number of filled fields and number of skipped `0,00` values
+- Autofill triggers `input`, `change`, and `blur` events
+- Offline-only (no telemetry, no network calls)
+
+## Input format
+
+Example:
+
+```
+
+beitrag1000:511,00;;
+beitragssatzAllgemein:17,89;;
+beitrag3000:0,00;;
+beitragU1:87,50;;
+
+```
+
+Notes:
+
+- Decimal comma and decimal dot are both supported (`511,00` / `511.00`)
+- `0,00` values are intentionally skipped but counted and reported
 
 ## Permissions (store review friendly)
 
-| Permission         | Why it is needed                                         | When it is used                               |
-| ------------------ | -------------------------------------------------------- | --------------------------------------------- |
-| `activeTab`        | Access the active SV-Meldeportal tab after a user action | Only after clicking **Fill**                  |
-| `scripting`        | Inject the content script on demand into the active tab  | Only after clicking **Fill**                  |
-| `clipboardRead`    | Read JLohn line from clipboard                           | Only after clicking **Import from clipboard** |
-| `host_permissions` | Restrict script injection to `sv-meldeportal.de`         | Only for matching SV pages                    |
+activeTab  
+Used to access the currently active SV-Meldeportal tab after clicking
+**SV-Meldeportal befüllen**
 
-**Data handling:** No data is transmitted. Processing happens locally in the browser.
+scripting  
+Used to inject the content script into the active tab after clicking
+**SV-Meldeportal befüllen**
+
+clipboardRead  
+Used only after clicking **Aus Zwischenablage holen**
+
+host_permissions  
+Restricts execution to `sv-meldeportal.de`
+
+Data handling:  
+No data is transmitted. All parsing and form filling happens locally in the browser.
 
 ## Project structure
 
-- `src/popup/*` – popup UI logic
-- `src/content/*` – content script that fills the form
-- `src/shared/*` – pure helpers (transform, number normalization, field list)
-- `tests/*` – unit tests (Vitest + JSDOM)
-- `.github/workflows/ci.yml` – GitHub Actions CI (format check + lint + tests + build)
-- `docs/store-listing.md` – store-ready listing texts
+- src/popup/\* – popup UI logic
+- src/content/\* – content script that fills the form
+- src/shared/\* – pure helpers (number normalization, field list)
+- tests/\* – unit tests (Vitest + JSDOM)
+- .github/workflows/ci.yml – GitHub Actions CI
+- docs/store-listing.md – store-ready listing texts
 
 ## Commands
 
-### Install
+### Install dependencies:
 
-```bash
+```
 npm install
 ```
 
-### Format
+### Format code:
 
-```bash
+```
 npm run format
 npm run format:check
 ```
 
-### Lint
+### Lint:
 
-```bash
+```
 npm run lint
 ```
 
-### Tests
+### Tests:
 
-```bash
+```
 npm test
 npm run test:watch
 npm run test:coverage
-Coverage output in coverage/.
 ```
+
+### Coverage output is written to `coverage/`.
 
 ### Build (release)
 
-```bash
+```
 npm run build
+```
 
-Outputs:
-dist/chrome/ and dist/sv-meldeportal-jlohn-autofill-<version>-chrome-edge.zip
-dist/firefox/ and dist/sv-meldeportal-jlohn-autofill-<version>-firefox.zip
+Build outputs:
+
+```
+dist/chrome/
+dist/sv-meldeportal-jlohn-autofill-<version>-chrome-edge.zip
+
+dist/firefox/
+dist/sv-meldeportal-jlohn-autofill-<version>-firefox.zip
+
 dist/sv-meldeportal-jlohn-autofill-<version>-full-project.zip
 ```
 
+The version is taken **only from package.json**.
+
 ### Debugging
 
-Set `localStorage.SV_AUTOFILL_DEBUG = "1"` in popup DevTools or page DevTools.
+Enable debug logging by setting:
 
-## Review FAQ (store reviewers)
+```
+localStorage.SV_AUTOFILL_DEBUG = "1";
+```
 
-#### Does this extension collect or transmit personal data?
+in the popup DevTools or page DevTools.
 
-No. The extension does not send any data to servers. All parsing and form filling happens locally in the browser.
+## Review FAQ
 
-#### Why does it request clipboardRead?
+Does this extension collect or transmit personal data?
 
-Used only after the user clicks Import from clipboard in the popup.
+No. The extension does not send any data to servers.
+All processing happens locally in the browser.
 
-#### Why activeTab and scripting?
+Why does it request clipboardRead?
 
-Used only to inject/run the content script in the active SV-Meldeportal tab after clicking Fill.
+Clipboard access is used only after the user explicitly clicks
+**Aus Zwischenablage holen**.
 
-#### What sites can it run on?
+Why activeTab and scripting?
 
-Restricted to sv-meldeportal.de via host permissions.
+They are required to inject and run the content script in the active
+SV-Meldeportal tab after the user clicks **Befüllen**.
 
-#### Why are there multiple config files?
+What sites can it run on?
 
-build.mjs builds the extension and creates ZIP files.
-vitest.config.js configures unit tests + coverage.
+Execution is restricted to `sv-meldeportal.de`
+via host permissions.
+
+Why are there multiple config files?
+
+build.mjs builds the extension and creates ZIP artifacts.  
+vitest.config.js configures unit tests and coverage.
 
 ## License
 
