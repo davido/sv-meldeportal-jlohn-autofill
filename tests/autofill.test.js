@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { FIELD_ORDER } from "../src/shared/fields.js";
-import {
-  extractRelevantLine,
-  parseKeyedToMap,
-  runAutofillFromRaw
-} from "../src/content/autofill.js";
+import { extractRelevantLine, parseKeyedToMap, runAutofillFromRaw } from "../src/content/autofill.js";
 
 function makeDocWithInputs() {
   const doc = document.implementation.createHTMLDocument("test");
@@ -41,6 +37,12 @@ describe("content/autofill helpers (keyed-only)", () => {
     expect(m.get("b")).toBe("2");
     expect(m.has("invalid")).toBe(false);
   });
+
+  it("parseKeyedToMap tolerates leading ';' (e.g. from ';;;')", () => {
+    const m = parseKeyedToMap(";beitragKrankenversFreiw:438,00;;beitragU1:214,58");
+    expect(m.get("beitragKrankenversFreiw")).toBe("438,00");
+    expect(m.get("beitragU1")).toBe("214,58");
+  });
 });
 
 describe("runAutofillFromRaw (jsdom, keyed-only)", () => {
@@ -50,6 +52,14 @@ describe("runAutofillFromRaw (jsdom, keyed-only)", () => {
     expect(r.ok).toBe(true);
     expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("10,00");
     expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
+
+  it("fills fields even if keyed parts contain leading ';' from ';;;'", () => {
+    const doc = makeDocWithInputs();
+    const r = runAutofillFromRaw("beitragU1:214,58;;;beitragKrankenversFreiw:438,00", doc);
+    expect(r.ok).toBe(true);
+    expect(doc.querySelector('input[name="beitragU1"]').value).toBe("214,58");
+    expect(doc.querySelector('input[name="beitragKrankenversFreiw"]').value).toBe("438,00");
   });
 
   it("ignores unknown keys", () => {
@@ -100,8 +110,8 @@ describe("runAutofillFromRaw (jsdom, keyed-only)", () => {
     const doc = makeDocWithInputs();
     const r = runAutofillFromRaw("beitrag1000:abc;;beitragU1:5,00", doc);
     expect(r.ok).toBe(true);
-    // beitrag1000 is ignored, beitragU1 is filled
     expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("");
     expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
   });
 });
+
