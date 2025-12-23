@@ -131,15 +131,36 @@ dist/sv-meldeportal-jlohn-autofill-<version>-full-project.zip
 
 The version is taken **only from package.json**.
 
-### Debugging
+## Debugging
 
-Enable debug logging by setting:
+Debug logging can be enabled directly in the popup UI.
 
-```
-localStorage.SV_AUTOFILL_DEBUG = "1";
-```
+At the top of the popup, enable the **Debug** checkbox.
+When enabled:
 
-in the popup DevTools or page DevTools.
+- detailed debug information is logged to the page console
+- a compact summary is logged after each autofill run  
+  (`[SV-Autofill] summary { applied: X, skippedZero: Y }`)
+
+Debug logging applies immediately and can be toggled on or off at any time.
+
+## Content Script Injection Safety
+
+The extension injects its content script on demand when the user clicks
+**SV-Meldeportal befüllen**.
+
+To ensure correct behavior even if the script is injected multiple times
+(e.g. due to repeated user actions or browser internals), the content script
+is protected by an internal guard.
+
+This guarantees that:
+
+- the message listener is installed exactly once per page
+- autofill runs only once per user action
+- duplicate form interactions and duplicate log output are avoided
+
+This design makes the extension robust against repeated injections and
+ensures predictable behavior.
 
 ## Review FAQ
 
