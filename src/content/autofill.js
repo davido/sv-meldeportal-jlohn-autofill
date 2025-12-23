@@ -1,5 +1,8 @@
 import { FIELD_ORDER } from "../shared/fields.js";
 import { normalizeNumberToPortal, isZeroValue } from "../shared/number.js";
+import { dbg, dbgGroup, dbgGroupEnd } from "../shared/debug.js";
+
+const LOG_PREFIX = "[SV-Autofill]";
 
 /**
  * Extract a single relevant line from raw input.
@@ -62,64 +65,73 @@ export function findInputsByName(doc) {
  * Skips empty/zero/readonly/disabled fields.
  * Counts skipped zero values (0,00) for JLohn/AutoHotKey compatibility.
  */
-export function applyValuesToDocument(doc, valuesMap, { debug = false } = {}) {
+export function applyValuesToDocument(doc, valuesMap) {
   const evOpts = { bubbles: true };
-  const inputsByName = findInputsByName(doc);
+  const inputsByName = new Map(
+    FIELD_ORDER.map((f) => [f, doc.querySelector(`input[name="${f}"]`)])
+  );
 
   const missing = FIELD_ORDER.filter((f) => !inputsByName.get(f));
   if (missing.length) {
+    dbg(LOG_PREFIX, "missing fields", missing);
     return {
       ok: false,
-      message: "Not all expected fields were found. Are you on the contribution form page?",
+      message: "Not all expected fields were found.",
       details: missing.join(", ")
     };
   }
 
-  const applied = [];
-  let skippedZeroCount = 0;
+  let applied = 0;
+  let skippedZero = 0;
 
-  function setField(name, rawVal) {
+  const g = dbgGroup(LOG_PREFIX, "apply");
+
+  for (const [name, rawVal] of valuesMap.entries()) {
     const el = inputsByName.get(name);
-    if (!el) return;
+    if (!el) {
+      dbg(LOG_PREFIX, "ignore unknown key", name);
+      continue;
+    }
 
     const normalized = normalizeNumberToPortal(rawVal);
-    if (normalized == null) return;
-    if (normalized === "") return;
+    if (normalized == null || normalized === "") continue;
 
     if (isZeroValue(normalized)) {
-      skippedZeroCount++;
-      return;
+      skippedZero++;
+      dbg(LOG_PREFIX, "skip zero", name);
+      continue;
     }
 
-    if (el.readOnly || el.hasAttribute("readonly") || el.disabled) {
-      if (debug) console.log("[SV-Autofill] SKIP readonly/disabled", name);
-      return;
+    if (el.readOnly || el.disabled) {
+      dbg(LOG_PREFIX, "skip readonly", name);
+      continue;
     }
 
-    el.focus();
     el.value = normalized;
     el.dispatchEvent(new Event("input", evOpts));
     el.dispatchEvent(new Event("change", evOpts));
     el.dispatchEvent(new Event("blur", evOpts));
 
-    applied.push({ name, val: normalized });
+    applied++;
+    dbg(LOG_PREFIX, "set", name, normalized);
   }
 
-  // Only apply keys we actually know (FIELD_ORDER). Unknown keys are ignored.
-  for (const [name, rawVal] of valuesMap.entries()) {
-    if (!inputsByName.has(name)) continue;
-    setField(name, rawVal);
-  }
+  if (g) dbgGroupEnd();
 
-  const keyedExport = applied.map((x) => `${x.name}:${x.val}`).join(";;");
+  // ⭐ NEW: compact summary log
+  // shows exactly: [SV-Autofill] summary { applied: 10, skippedZero: 6 }
+  dbg(LOG_PREFIX, "summary", `{ applied: ${applied}, skippedZero: ${skippedZero} }`);
+
   return {
     ok: true,
-    message: applied.length
-      ? `Filled ${applied.length} fields`
-      : "No fields filled (only empty/zero or non-editable).",
-    appliedCount: applied.length,
-    skippedZeroCount,
-    keyedExport
+    appliedCount: applied,
+    skippedZeroCount: skippedZero,
+    message:
+      applied === 0
+        ? "No fields filled"
+        : skippedZero === 0
+          ? `Filled ${applied} field${applied === 1 ? "" : "s"}`
+          : `Filled ${applied} field${applied === 1 ? "" : "s"}, ${skippedZero} × 0,00 skipped`
   };
 }
 

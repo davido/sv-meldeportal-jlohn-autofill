@@ -36,6 +36,22 @@
       flex-wrap: wrap;
       margin-top: 6px;
     }
+    .row.top {
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 2px;
+      margin-bottom: 6px;
+    }
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      user-select: none;
+    }
+    .toggle input {
+      transform: translateY(1px);
+    }
     button {
       padding: 6px 10px;
       font-size: 12px;
@@ -74,6 +90,14 @@
 </head>
 <body>
   <h1>SV-Meldeportal &amp; JLohn</h1>
+
+  <!-- ✅ Debug toggle (ganz oben) -->
+  <div class="row top">
+    <label class="toggle" for="debugToggle" title="Schreibt Debug-Ausgaben in die Konsole der SV-Meldeportal-Seite">
+      <input id="debugToggle" type="checkbox" />
+      Debug-Ausgaben
+    </label>
+  </div>
 
   <label for="keyedInput">
     <strong>Feldwerte eingeben</strong> (feld:wert;;feld:wert;;…)
