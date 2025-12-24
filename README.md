@@ -135,23 +135,37 @@ The version is taken **only from package.json**.
 
 Debug logging can be enabled directly in the popup UI.
 
-At the top of the popup, enable the **Debug** checkbox.
+At the top of the popup, enable the Debug-Ausgaben checkbox.
+
 When enabled:
 
-- detailed debug information is logged to the page console
-- a compact summary is logged after each autofill run  
-  (`[SV-Autofill] summary { applied: X, skippedZero: Y }`)
+detailed debug information is logged to the browser console of the SV-Meldeportal page
+(not only the popup console)
 
-Debug logging applies immediately and can be toggled on or off at any time.
+a compact summary is logged after each autofill run, for example:
+
+```
+[SV-Autofill] summary { applied: 10, skippedZero: 7 }
+```
+
+Notes:
+
+- The debug flag is stored using chrome.storage.local
+- Debug output is enabled only when the checkbox is active
+- No debug state is persisted outside the extension
+
+Debug logging can be toggled on or off at any time without reloading the page
+
+This makes debugging explicit, transparent, and fully user-controlled.
 
 ## Content Script Injection Safety
 
 The extension injects its content script on demand when the user clicks
 **SV-Meldeportal befüllen**.
 
-To ensure correct behavior even if the script is injected multiple times
-(e.g. due to repeated user actions or browser internals), the content script
-is protected by an internal guard.
+Because browser APIs may inject the same content script multiple times
+(e.g. due to repeated user actions or internal browser behavior),
+the content script is protected by an internal listener guard.
 
 This guarantees that:
 
@@ -159,8 +173,8 @@ This guarantees that:
 - autofill runs only once per user action
 - duplicate form interactions and duplicate log output are avoided
 
-This design makes the extension robust against repeated injections and
-ensures predictable behavior.
+This design makes the extension robust against repeated injections and ensures
+predictable, idempotent behavior.
 
 ## Review FAQ
 

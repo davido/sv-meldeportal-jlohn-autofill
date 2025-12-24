@@ -3,7 +3,7 @@
   "name": "SV-Meldeportal JLohn Autofill",
   "version": "0.0.0",
   "description": "Fills SV-Meldeportal contribution fields from a JLohn export line (popup + optional clipboard).",
-  "permissions": ["scripting", "activeTab", "clipboardRead"],
+  "permissions": ["scripting", "activeTab", "clipboardRead", "storage"],
   "host_permissions": ["*://*.sv-meldeportal.de/*", "*://sv-meldeportal.de/*"],
   "icons": {
     "16": "icons/icon16.png",

@@ -1,8 +1,37 @@
 import { clearStatus, setBusy, setStatus } from "./ui.js";
-import { popupDbg } from "./debug.js";
 import { readFromClipboardIfEmpty } from "./clipboard.js";
 import { runInActiveTab } from "./tabBridge.js";
-import { getDebugEnabled, setDebugEnabled } from "../shared/debugState.js";
+
+const DEBUG_KEY = "SV_AUTOFILL_DEBUG";
+
+function storageGet(key) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get([key], (result) => resolve(result?.[key]));
+    } catch {
+      resolve(undefined);
+    }
+  });
+}
+
+function storageSet(obj) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.set(obj, () => resolve());
+    } catch {
+      resolve();
+    }
+  });
+}
+
+async function getDebugEnabled() {
+  const v = await storageGet(DEBUG_KEY);
+  return v === true; // stored as boolean
+}
+
+async function setDebugEnabled(on) {
+  await storageSet({ [DEBUG_KEY]: !!on });
+}
 
 async function handleClipboardClick() {
   const textarea = document.getElementById("keyedInput");
@@ -53,13 +82,10 @@ async function initDebugToggle() {
   toggle.addEventListener("change", async () => {
     await setDebugEnabled(toggle.checked);
     setStatus(toggle.checked ? "Debug-Ausgaben aktiviert." : "Debug-Ausgaben deaktiviert.", "info");
-    await popupDbg("Debug toggled:", toggle.checked ? "ON" : "OFF");
   });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await popupDbg("Popup loaded");
-
   await initDebugToggle();
 
   document.getElementById("btnClipboard")?.addEventListener("click", handleClipboardClick);

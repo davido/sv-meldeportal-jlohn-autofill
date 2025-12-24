@@ -2,7 +2,6 @@ import { runAutofillFromRaw } from "./autofill.js";
 
 /**
  * Content script message handler.
- * The popup injects this script on demand and then sends { raw } to be processed.
  *
  * IMPORTANT:
  * This file can be injected multiple times by chrome.scripting.executeScript.
@@ -21,7 +20,6 @@ if (!globalThis[LISTENER_FLAG]) {
       const raw = msg?.payload?.raw ?? "";
       const debug = msg?.payload?.debug === true;
 
-      // keyed-only: runAutofillFromRaw expects field:value;;field:value...
       const result = runAutofillFromRaw(raw, document, { debug });
       sendResponse(result);
     } catch (e) {
