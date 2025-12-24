@@ -54,22 +54,39 @@ Notes:
 
 ## Permissions (store review friendly)
 
-activeTab  
-Used to access the currently active SV-Meldeportal tab after clicking
-**SV-Meldeportal befüllen**
+#### activeTab
 
-scripting  
-Used to inject the content script into the active tab after clicking
-**SV-Meldeportal befüllen**
+Used to access the currently active SV-Meldeportal tab after the user clicks
+**SV-Meldeportal befüllen**.
 
-clipboardRead  
-Used only after clicking **Aus Zwischenablage holen**
+#### scripting
 
-host_permissions  
-Restricts execution to `sv-meldeportal.de`
+Used to inject the content script on demand into the active SV-Meldeportal tab
+after an explicit user action.
 
-Data handling:  
-No data is transmitted. All parsing and form filling happens locally in the browser.
+#### clipboardRead
+
+Used only after clicking **Aus Zwischenablage holen** to read the JLohn input line.
+The clipboard is never accessed automatically.
+
+### storage
+
+Used to store the state of the Debug-Ausgaben checkbox
+(via `chrome.storage.local`).
+No personal or form data is stored.
+
+#### host_permissions
+
+Restricts script injection to the SV-Meldeportal domain:
+
+- `sv-meldeportal.de`
+
+Data handling
+
+- No data is transmitted to any server
+- No telemetry, tracking, or analytics
+  -All parsing and form filling happens locally in the browser
+- Clipboard access is user-triggered only
 
 ## Project structure
 
