@@ -4,10 +4,6 @@ import { dbg, dbgGroup, dbgGroupEnd } from "../shared/debug.js";
 
 const LOG_PREFIX = "[SV-Autofill]";
 
-/**
- * Extract a single relevant line from raw input.
- * - Handles pasted multi-line strings by picking a line containing ':' (keyed).
- */
 export function extractRelevantLine(input) {
   if (input == null) return "";
   const s0 = String(input)
@@ -20,16 +16,9 @@ export function extractRelevantLine(input) {
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // keyed-only: prefer a line that contains ':'
   return (lines.find((l) => l.includes(":")) || lines[0] || "").trim();
 }
 
-/**
- * Parse keyed input into a Map(fieldName -> rawValue).
- *
- * Robust against accidental extra semicolons (e.g. ';;;') which can leave leading ';'
- * on the next token when splitting by ';;'.
- */
 export function parseKeyedToMap(line) {
   const map = new Map();
   const parts = String(line || "")
@@ -38,8 +27,7 @@ export function parseKeyedToMap(line) {
     .filter(Boolean);
 
   for (let p of parts) {
-    // tolerate ';;;': remove leftover leading ';' from tokens like ';beitragX:123'
-    p = p.replace(/^;+/, "").trim();
+    p = p.replace(/^;+/, "").trim(); // tolerate ';;;'
 
     const idx = p.indexOf(":");
     if (idx <= 0) continue;
@@ -60,16 +48,9 @@ export function findInputsByName(doc) {
   return map;
 }
 
-/**
- * Apply values to the document and trigger events.
- * Skips empty/zero/readonly/disabled fields.
- * Counts skipped zero values (0,00) for JLohn/AutoHotKey compatibility.
- */
 export function applyValuesToDocument(doc, valuesMap, { debug = false } = {}) {
   const evOpts = { bubbles: true };
-  const inputsByName = new Map(
-    FIELD_ORDER.map((f) => [f, doc.querySelector(`input[name="${f}"]`)])
-  );
+  const inputsByName = findInputsByName(doc);
 
   const missing = FIELD_ORDER.filter((f) => !inputsByName.get(f));
   if (missing.length) {
@@ -118,8 +99,7 @@ export function applyValuesToDocument(doc, valuesMap, { debug = false } = {}) {
 
   if (g) dbgGroupEnd(debug);
 
-  // Summary log (only if debug=true)
-  dbg(debug, LOG_PREFIX, "summary", `{ applied: ${applied}, skippedZero: ${skippedZero} }`);
+  dbg(debug, LOG_PREFIX, "summary", { applied, skippedZero });
 
   return {
     ok: true,
@@ -134,7 +114,6 @@ export function applyValuesToDocument(doc, valuesMap, { debug = false } = {}) {
   };
 }
 
-/** Main entry point called by the content script message handler. */
 export function runAutofillFromRaw(raw, doc = document, { debug = false } = {}) {
   const line = extractRelevantLine(raw);
   if (!line) return { ok: false, message: "No input found. Please paste keyed data." };

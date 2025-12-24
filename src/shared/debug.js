@@ -1,7 +1,4 @@
-// shared/debug.js
-// Debug helper functions that are controlled ONLY by an explicit boolean.
-// (No localStorage here → avoids popup/page storage mismatch.)
-
+// src/shared/debug.js
 export function dbg(debug, prefix, ...args) {
   if (!debug) return;
   // eslint-disable-next-line no-console

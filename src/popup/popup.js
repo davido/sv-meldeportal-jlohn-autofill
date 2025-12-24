@@ -1,26 +1,8 @@
 import { clearStatus, setBusy, setStatus } from "./ui.js";
-import { popupDbg, popupDebugEnabled } from "./debug.js";
+import { popupDbg } from "./debug.js";
 import { readFromClipboardIfEmpty } from "./clipboard.js";
 import { runInActiveTab } from "./tabBridge.js";
-
-const DEBUG_KEY = "SV_AUTOFILL_DEBUG";
-
-function isDebugEnabled() {
-  try {
-    return localStorage.getItem(DEBUG_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function setDebugEnabled(on) {
-  try {
-    if (on) localStorage.setItem(DEBUG_KEY, "1");
-    else localStorage.removeItem(DEBUG_KEY);
-  } catch {
-    // ignore
-  }
-}
+import { getDebugEnabled, setDebugEnabled } from "../shared/debugState.js";
 
 async function handleClipboardClick() {
   const textarea = document.getElementById("keyedInput");
@@ -34,12 +16,13 @@ async function handleFillKeyedClick() {
     const textarea = document.getElementById("keyedInput");
     let raw = (textarea?.value || "").trim();
 
-    // Optional: falls leer, direkt aus Zwischenablage holen
     if (!raw) raw = await readFromClipboardIfEmpty(textarea);
     if (!raw) return setStatus("Keine Eingabe gefunden.", "error");
 
+    const debug = await getDebugEnabled();
+
     setStatus("Sende Daten an den aktiven SV-Meldeportal-Tab …", "info");
-    const r = await runInActiveTab({ raw, debug: popupDebugEnabled() });
+    const r = await runInActiveTab({ raw, debug });
 
     if (r?.ok) {
       const filled = typeof r.appliedCount === "number" ? r.appliedCount : 0;
@@ -61,26 +44,23 @@ async function handleFillKeyedClick() {
   }
 }
 
-function initDebugToggle() {
+async function initDebugToggle() {
   const toggle = document.getElementById("debugToggle");
   if (!toggle) return;
 
-  toggle.checked = isDebugEnabled();
+  toggle.checked = await getDebugEnabled();
 
-  toggle.addEventListener("change", () => {
-    setDebugEnabled(toggle.checked);
-
-    // nur Info, kein "ok/error"
+  toggle.addEventListener("change", async () => {
+    await setDebugEnabled(toggle.checked);
     setStatus(toggle.checked ? "Debug-Ausgaben aktiviert." : "Debug-Ausgaben deaktiviert.", "info");
-
-    popupDbg("Debug toggled:", toggle.checked ? "ON" : "OFF");
+    await popupDbg("Debug toggled:", toggle.checked ? "ON" : "OFF");
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  popupDbg("Popup loaded");
+document.addEventListener("DOMContentLoaded", async () => {
+  await popupDbg("Popup loaded");
 
-  initDebugToggle();
+  await initDebugToggle();
 
   document.getElementById("btnClipboard")?.addEventListener("click", handleClipboardClick);
   document.getElementById("btnFillKeyed")?.addEventListener("click", handleFillKeyedClick);

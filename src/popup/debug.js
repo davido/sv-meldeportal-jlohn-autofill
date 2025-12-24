@@ -1,14 +1,12 @@
-const POPUP_DEBUG_DEFAULT = false;
+// src/popup/debug.js
+import { getDebugEnabled } from "../shared/debugState.js";
 
-export function popupDebugEnabled() {
-  try {
-    return localStorage.getItem("SV_AUTOFILL_DEBUG") === "1" || POPUP_DEBUG_DEFAULT;
-  } catch {
-    return POPUP_DEBUG_DEFAULT;
-  }
+export async function popupDebugEnabled() {
+  return await getDebugEnabled();
 }
 
-export function popupDbg(...args) {
-  if (!popupDebugEnabled()) return;
+export async function popupDbg(...args) {
+  if (!(await popupDebugEnabled())) return;
+  // eslint-disable-next-line no-console
   console.log("[SV-Autofill][POPUP]", ...args);
 }
