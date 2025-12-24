@@ -4,6 +4,7 @@ import { runInActiveTab } from "./tabBridge.js";
 
 const DEBUG_KEY = "SV_AUTOFILL_DEBUG";
 
+// --- chrome.storage.local helpers (MV3 safe) ---
 function storageGet(key) {
   return new Promise((resolve) => {
     try {
@@ -33,6 +34,7 @@ async function setDebugEnabled(on) {
   await storageSet({ [DEBUG_KEY]: !!on });
 }
 
+// --- handlers ---
 async function handleClipboardClick() {
   const textarea = document.getElementById("keyedInput");
   await readFromClipboardIfEmpty(textarea);
@@ -41,10 +43,12 @@ async function handleClipboardClick() {
 async function handleFillKeyedClick() {
   clearStatus();
   setBusy(true);
+
   try {
     const textarea = document.getElementById("keyedInput");
     let raw = (textarea?.value || "").trim();
 
+    // optional: falls leer, direkt aus Zwischenablage holen
     if (!raw) raw = await readFromClipboardIfEmpty(textarea);
     if (!raw) return setStatus("Keine Eingabe gefunden.", "error");
 
@@ -60,9 +64,7 @@ async function handleFillKeyedClick() {
       const filledLabel = filled === 1 ? "Feld" : "Felder";
       let msg = `OK – ${filled} ${filledLabel} befüllt`;
 
-      if (skippedZero > 0) {
-        msg += `, ${skippedZero} × 0,00 übersprungen`;
-      }
+      if (skippedZero > 0) msg += `, ${skippedZero} × 0,00 übersprungen`;
 
       setStatus(msg, "ok");
     } else {
@@ -81,13 +83,18 @@ async function initDebugToggle() {
 
   toggle.addEventListener("change", async () => {
     await setDebugEnabled(toggle.checked);
-    setStatus(toggle.checked ? "Debug-Ausgaben aktiviert." : "Debug-Ausgaben deaktiviert.", "info");
+    setStatus(
+      toggle.checked
+        ? "Debug-Ausgaben aktiv (in der Konsole der SV-Meldeportal-Seite)."
+        : "Debug-Ausgaben deaktiviert.",
+      "info"
+    );
   });
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  await initDebugToggle();
-
+// --- init ---
+document.addEventListener("DOMContentLoaded", () => {
+  initDebugToggle();
   document.getElementById("btnClipboard")?.addEventListener("click", handleClipboardClick);
   document.getElementById("btnFillKeyed")?.addEventListener("click", handleFillKeyedClick);
 });

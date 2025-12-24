@@ -1,121 +1,282 @@
 <!doctype html>
 <html lang="de">
-<head>
-  <meta charset="utf-8">
-  <title>SV-Meldeportal JLohn Autofill</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      margin: 8px;
-      min-width: 340px;
-      max-width: 420px;
-    }
-    h1 {
-      font-size: 16px;
-      margin: 0 0 6px;
-    }
-    p, label {
-      font-size: 12px;
-      margin: 6px 0 4px;
-      display: block;
-    }
-    textarea {
-      width: 100%;
-      min-height: 120px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-      box-sizing: border-box;
-      padding: 6px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    .row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 6px;
-    }
-    .row.top {
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 2px;
-      margin-bottom: 6px;
-    }
-    .toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      user-select: none;
-    }
-    .toggle input {
-      transform: translateY(1px);
-    }
-    button {
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      border-radius: 8px;
-      border: 1px solid #bbb;
-      background: #f7f7f7;
-    }
-    button:hover {
-      background: #efefef;
-    }
-    #status {
-      margin-top: 8px;
-      font-size: 11px;
-      white-space: pre-wrap;
-      padding: 6px 8px;
-      border-radius: 8px;
-      border: 1px solid transparent;
-    }
-    #status.info {
-      background: #f5f5f5;
-      border-color: #e0e0e0;
-      color: #333;
-    }
-    #status.ok {
-      background: #e8f7ec;
-      border-color: #1f8a3b;
-      color: #1f6d33;
-    }
-    #status.error {
-      background: #fdeaea;
-      border-color: #c62828;
-      color: #8e1b1b;
-    }
-  </style>
-</head>
-<body>
-  <h1>SV-Meldeportal &amp; JLohn</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>SV-Meldeportal Autofill</title>
+    <style>
+      :root {
+        --bg: #f4f6f9;
+        --card: #ffffff;
+        --border: #d7dee8;
+        --text: #111827;
+        --muted: #6b7280;
+        --blue: #1f5ea8;
+        --blue-hover: #184b86;
+        --shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
+        --radius: 16px;
 
-  <!-- ✅ Debug toggle (ganz oben) -->
-  <div class="row top">
-    <label class="toggle" for="debugToggle" title="Schreibt Debug-Ausgaben in die Konsole der SV-Meldeportal-Seite">
-      <input id="debugToggle" type="checkbox" />
-      Debug-Ausgaben
-    </label>
-  </div>
+        --status-min-h: 34px;
+      }
 
-  <label for="keyedInput">
-    <strong>Feldwerte eingeben</strong> (feld:wert;;feld:wert;;…)
-  </label>
+      * {
+        box-sizing: border-box;
+      }
 
-  <textarea
-    id="keyedInput"
-    placeholder="beitrag1000:511,00;;beitragssatzAllgemein:17,89;;beitragZusatzKrankenvers:115,16;;…"
-  ></textarea>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        margin: 10px;
+        min-width: 360px;
+        max-width: 440px;
+        background: var(--bg);
+        color: var(--text);
+      }
 
-  <div class="row">
-    <button id="btnClipboard" type="button">Aus Zwischenablage holen</button>
-    <button id="btnFillKeyed" type="button">SV-Meldeportal befüllen</button>
-  </div>
+      .header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 4px 2px 10px;
+      }
 
-  <p id="status"></p>
+      h1 {
+        font-size: 18px;
+        margin: 0;
+        letter-spacing: 0.2px;
+      }
 
-  <script src="popup.js"></script>
-</body>
+      .subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 12px;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .row.top {
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      label {
+        font-size: 12px;
+        margin: 0 0 6px;
+        display: block;
+      }
+
+      .label-line {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+
+      .label-main {
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .label-hint {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.35;
+        padding: 10px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #fbfcfe;
+        outline: none;
+        resize: vertical;
+      }
+
+      textarea:focus {
+        border-color: rgba(31, 94, 168, 0.55);
+        box-shadow: 0 0 0 3px rgba(31, 94, 168, 0.18);
+        background: #ffffff;
+      }
+
+      .tip {
+        margin: 8px 2px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 1px 8px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: #fff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 12px;
+        margin: 0 2px;
+      }
+
+      /* Debug toggle (de-emphasized) */
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        user-select: none;
+      }
+
+      .toggle input {
+        width: 16px;
+        height: 16px;
+        transform: translateY(1px);
+        accent-color: var(--blue);
+      }
+
+      button {
+        padding: 12px 12px;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #f8fafc;
+        color: var(--text);
+        font-weight: 700;
+        flex: 1 1 160px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      button:hover {
+        background: #eef2f7;
+      }
+
+      button:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
+
+      .primary {
+        background: var(--blue);
+        border-color: rgba(31, 94, 168, 0.9);
+        color: #fff;
+      }
+
+      .primary:hover {
+        background: var(--blue-hover);
+      }
+
+      /* ✅ Status: fixed layout to prevent jumping */
+      #status {
+        margin-top: 10px;
+        font-size: 12px;
+        white-space: pre-wrap;
+
+        /* FIX: always stable box */
+        min-height: var(--status-min-h);
+        padding: 8px 10px;
+
+        border-radius: 14px;
+        border: 1px solid #e0e0e0;
+
+        /* neutral idle look */
+        background: #fafafa;
+        color: #666;
+      }
+
+      #status.info {
+        background: #f5f5f5;
+        border-color: #e0e0e0;
+        color: #333;
+      }
+
+      #status.ok {
+        background: #e8f7ec;
+        border-color: #1f8a3b;
+        color: #1f6d33;
+      }
+
+      #status.error {
+        background: #fdeaea;
+        border-color: #c62828;
+        color: #8e1b1b;
+      }
+
+      /* Optional: keep empty status visually quiet */
+      #status:empty::before {
+        content: " ";
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="header">
+      <h1>SV-Meldeportal Autofill</h1>
+      <div class="subtitle">JLohn-Import</div>
+    </div>
+
+    <div class="card">
+      <div class="row top">
+        <label
+          class="toggle"
+          for="debugToggle"
+          title="Schreibt Debug-Ausgaben in die Konsole der SV-Meldeportal-Seite"
+        >
+          <input id="debugToggle" type="checkbox" />
+          Debug-Ausgaben (Konsole)
+        </label>
+      </div>
+
+      <div class="label-line">
+        <div class="label-main">Feldwerte eingeben</div>
+        <div class="label-hint">(feld:wert;;feld:wert;;…)</div>
+      </div>
+
+      <textarea
+        id="keyedInput"
+        placeholder="beitrag1000:511,00;;beitragssatzAllgemein:17,89;;beitragZusatzKrankenvers:115,16;;…"
+      ></textarea>
+
+      <div class="tip">
+        Tipp: Dezimalpunkt und Dezimalkomma sind ok (<span class="pill">511.00</span> /
+        <span class="pill">511,00</span>). Werte <span class="pill">0,00</span> werden automatisch
+        übersprungen.
+      </div>
+
+      <div class="row">
+        <button id="btnClipboard" type="button" title="Aus der Zwischenablage einfügen">
+          📋 Zwischenablage
+        </button>
+        <button id="btnFillKeyed" class="primary" type="button" title="SV-Meldeportal befüllen">
+          ⚡ SV-Meldeportal befüllen
+        </button>
+      </div>
+
+      <p id="status"></p>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
 </html>
 
