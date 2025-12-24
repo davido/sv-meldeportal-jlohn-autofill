@@ -7,6 +7,7 @@ on:
 jobs:
   test-lint-build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,19 +38,12 @@ jobs:
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage/
-
-      - name: Upload release ZIPs (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-zips
-          path: |
-            dist/*chrome-edge.zip
-            dist/*firefox.zip
-            dist/*full-project.zip
+          if-no-files-found: error
 
