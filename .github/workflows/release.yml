@@ -11,9 +11,12 @@ permissions:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -30,11 +33,25 @@ jobs:
       - name: Build (creates ZIPs)
         run: npm run build
 
-      - name: Create GitHub Release and upload ZIPs
+      - name: Verify expected release ZIPs exist
+        run: |
+          ls -lah dist
+          test -n "$(ls -1 dist/*chrome-edge.zip 2>/dev/null)"
+          test -n "$(ls -1 dist/*firefox.zip 2>/dev/null)"
+          test -n "$(ls -1 dist/*full-project.zip 2>/dev/null)"
+
+      - name: Generate SHA256SUMS.txt
+        run: |
+          cd dist
+          sha256sum *chrome-edge.zip *firefox.zip *full-project.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*chrome-edge.zip
             dist/*firefox.zip
             dist/*full-project.zip
+            dist/SHA256SUMS.txt
 
