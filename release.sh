@@ -1,16 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-}"
+DRY_RUN=false
+VERSION=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)
+      DRY_RUN=true
+      ;;
+    *)
+      VERSION="$arg"
+      ;;
+  esac
+done
+
 if [[ -z "${VERSION}" ]]; then
-  echo "Usage: $0 <version>   (e.g. $0 2.6.0)"
+  echo "Usage: $0 <version> [--dry-run]"
+  echo "Example: $0 2.7.1 --dry-run"
   exit 1
 fi
 
 if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-  echo "Error: version must look like semver (e.g. 2.6.0 or 2.6.0-beta.1)"
+  echo "Error: version must look like semver (e.g. 2.7.0 or 2.7.0-beta.1)"
   exit 1
 fi
+
+log() {
+  if $DRY_RUN; then
+    echo "[dry-run] $*"
+  else
+    echo "$*"
+  fi
+}
+
+run() {
+  if $DRY_RUN; then
+    echo "[dry-run] $*"
+  else
+    "$@"
+  fi
+}
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
   echo "Error: not inside a git repository."
@@ -24,6 +54,7 @@ if [[ "${BRANCH}" != "main" ]]; then
 fi
 
 TAG="v${VERSION}"
+
 if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
   echo "Error: tag '${TAG}' already exists locally."
   exit 1
@@ -33,53 +64,49 @@ if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
   exit 1
 fi
 
-# Ensure clean tree BEFORE we change version
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "Error: working tree not clean. Commit/stash changes first:"
   git status --porcelain
   exit 1
 fi
 
-echo "==> Setting package.json version to ${VERSION}"
-node -e "
-const fs=require('fs');
-const p='package.json';
-const j=JSON.parse(fs.readFileSync(p,'utf8'));
-j.version='${VERSION}';
-fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-"
+log "==> Checking formatting (format:check)"
+npm run format:check
 
-# If version was already the same, package.json may be unchanged
-if git diff --quiet -- package.json; then
-  echo "==> package.json already at version ${VERSION} (no change)"
-else
-  echo "==> package.json updated"
-fi
-
-echo "==> Running tests"
+log "==> Running tests"
 npm test
 
-echo "==> Running build"
-npm run build
-
-# Commit only if we changed package.json
-if git diff --quiet -- package.json; then
-  echo "==> Skipping commit (no changes to package.json)"
+if ! $DRY_RUN; then
+  log "==> Setting package.json version to ${VERSION}"
+  node -e "
+  const fs=require('fs');
+  const p='package.json';
+  const j=JSON.parse(fs.readFileSync(p,'utf8'));
+  j.version='${VERSION}';
+  fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+  "
 else
-  echo "==> Committing version bump"
-  git add package.json
-  git commit -m "chore: release ${TAG}"
+  log "==> Would set package.json version to ${VERSION}"
 fi
 
-# Push main first (may include earlier commits)
-echo "==> Pushing main"
-git push origin main
+log "==> Running build"
+npm run build
 
-echo "==> Creating annotated tag ${TAG}"
-git tag -a "${TAG}" -m "Release ${TAG}"
+if ! $DRY_RUN && ! git diff --quiet -- package.json; then
+  log "==> Committing version bump"
+  git add package.json
+  git commit -m "chore: release ${TAG}"
+else
+  log "==> Would commit version bump (if changed)"
+fi
 
-echo "==> Pushing tag ${TAG}"
-git push origin "${TAG}"
+run git push origin main
+run git tag -a "${TAG}" -m "Release ${TAG}"
+run git push origin "${TAG}"
 
-echo "✅ Done: released ${TAG}"
+if $DRY_RUN; then
+  echo "✅ Dry run completed – no changes were made."
+else
+  echo "✅ Done: released ${TAG}"
+fi
 

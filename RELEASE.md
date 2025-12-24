@@ -42,12 +42,22 @@ chmod +x release.sh
 ### What it does
 
 - sets package.json.version to 2.7.0
+- working Tree clean?
+- npm run format:check
 - runs npm test
 - runs npm run build
 - commits the version bump: chore: release v2.7.0
 - creates annotated tag: v2.7.0
 - pushes main
 - pushes tag v2.7.0
+
+### Dry run (recommended before real release)
+
+Simulate a release without modifying anything:
+
+```bash
+./release.sh 2.7.1 --dry-run
+```
 
 ## Verify the release
 
