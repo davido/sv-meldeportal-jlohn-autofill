@@ -88,9 +88,9 @@ git tag -d v1.1.0
 ### Delete on origin
 
 ```bash
-git push origin --delete v2.7.0
+git push origin --delete v1.0.0
 # (equivalent)
-# git push origin :refs/tags/v2.7.0
+# git push origin :refs/tags/v1.0.0
 ```
 
 ### Optional: delete GitHub Release (manual)
