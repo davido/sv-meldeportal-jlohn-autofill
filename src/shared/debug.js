@@ -16,4 +16,3 @@ export function dbgGroupEnd(debug) {
   if (!debug) return;
   console.groupEnd();
 }
-
