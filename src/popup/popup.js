@@ -40,6 +40,31 @@ async function handleClipboardClick() {
   await readFromClipboardIfEmpty(textarea);
 }
 
+function formatResultMessage(r) {
+  const filled = typeof r.appliedCount === "number" ? r.appliedCount : 0;
+  const skippedZero = typeof r.skippedZeroCount === "number" ? r.skippedZeroCount : 0;
+
+  const filledLabel = filled === 1 ? "Feld" : "Felder";
+
+  const formLabel =
+    (typeof r.formLabel === "string" && r.formLabel.trim()) ||
+    (typeof r.form === "string" && r.form.trim()) ||
+    "unbekanntes Formular";
+
+  const formSuffix = ` (${formLabel})`;
+
+  let msg = `OK – ${filled} ${filledLabel} befüllt${formSuffix}`;
+
+  if (skippedZero > 0) msg += `, ${skippedZero} × 0,00 übersprungen`;
+
+  // Optional: Hinweis aus Content Script (z.B. fehlende Felder, dynamisch ausgeblendet)
+  if (typeof r.details === "string" && r.details.trim()) {
+    msg += `\n${r.details.trim()}`;
+  }
+
+  return msg;
+}
+
 async function handleFillKeyedClick() {
   clearStatus();
   setBusy(true);
@@ -57,18 +82,20 @@ async function handleFillKeyedClick() {
     setStatus("Sende Daten an den aktiven SV-Meldeportal-Tab …", "info");
     const r = await runInActiveTab({ raw, debug });
 
+    if (debug) {
+      // Debug-Ausgabe in der Popup-Konsole (nicht nur in der Seiten-Konsole)
+      console.log("[SV-Autofill][POPUP] Ergebnis:", r);
+      if (r?.form || r?.formLabel) {
+        console.log("[SV-Autofill][POPUP] Erkanntes Formular:", r.formLabel || r.form);
+      }
+    }
+
     if (r?.ok) {
-      const filled = typeof r.appliedCount === "number" ? r.appliedCount : 0;
-      const skippedZero = typeof r.skippedZeroCount === "number" ? r.skippedZeroCount : 0;
-
-      const filledLabel = filled === 1 ? "Feld" : "Felder";
-      let msg = `OK – ${filled} ${filledLabel} befüllt`;
-
-      if (skippedZero > 0) msg += `, ${skippedZero} × 0,00 übersprungen`;
-
-      setStatus(msg, "ok");
+      setStatus(formatResultMessage(r), "ok");
     } else {
-      setStatus(`Fehler – ${r?.message || "unbekannt"}`, "error");
+      const details =
+        typeof r?.details === "string" && r.details.trim() ? `\n${r.details.trim()}` : "";
+      setStatus(`Fehler – ${r?.message || "unbekannt"}${details}`, "error");
     }
   } finally {
     setBusy(false);
@@ -85,7 +112,7 @@ async function initDebugToggle() {
     await setDebugEnabled(toggle.checked);
     setStatus(
       toggle.checked
-        ? "Debug-Ausgaben aktiv (in der Konsole der SV-Meldeportal-Seite)."
+        ? "Debug-Ausgaben aktiv (Konsole der SV-Meldeportal-Seite + Popup-Konsole)."
         : "Debug-Ausgaben deaktiviert.",
       "info"
     );
