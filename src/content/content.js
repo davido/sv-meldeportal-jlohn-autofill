@@ -23,7 +23,6 @@ if (!globalThis[LISTENER_FLAG]) {
       const result = runAutofillFromRaw(raw, document, { debug });
       sendResponse(result);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error("[SV-Autofill] Content error:", e);
       sendResponse({ ok: false, message: e?.message || String(e) });
     }
