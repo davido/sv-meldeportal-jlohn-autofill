@@ -1,5 +1,5 @@
 import { extractRelevantLine, parseKeyedToMap } from "./parse.js";
-import { detectForm, findInputsByName } from "./forms.js";
+import { detectForm } from "./forms.js";
 import { applyValuesToDocument } from "./apply.js";
 
 export { extractRelevantLine, parseKeyedToMap } from "./parse.js";
@@ -12,10 +12,7 @@ export function runAutofillFromRaw(raw, doc = document, { debug = false } = {}) 
   if (!line) return { ok: false, message: "Kein Input gefunden. Bitte Feld-Input einfügen." };
 
   if (!line.includes(":")) {
-    return {
-      ok: false,
-      message: "Ungültiges Format. Erwartet: feld:wert;;feld:wert;;…"
-    };
+    return { ok: false, message: "Ungültiges Format. Erwartet: feld:wert;;feld:wert;;…" };
   }
 
   const values = parseKeyedToMap(line);
