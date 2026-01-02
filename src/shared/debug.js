@@ -1,65 +1,57 @@
 // Debug helper functions controlled ONLY by an explicit boolean.
 // No storage access here.
 
-function isArrayOfObjects(v) {
+function isPlainObject(v) {
   return (
-    Array.isArray(v) &&
-    v.length > 0 &&
-    v.every((x) => x && typeof x === "object" && !Array.isArray(x))
+    v != null &&
+    typeof v === "object" &&
+    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null)
   );
 }
 
-function formatArg(v) {
-  if (v == null) return String(v);
-
-  const t = typeof v;
-  if (t === "string" || t === "number" || t === "boolean") return v;
-
-  if (Array.isArray(v)) {
-    const smallPrimitive =
-      v.length <= 12 &&
-      v.every((x) => x == null || ["string", "number", "boolean"].includes(typeof x));
-    if (smallPrimitive) return `[${v.map((x) => (x == null ? String(x) : x)).join(", ")}]`;
-
-    try {
-      return JSON.stringify(v);
-    } catch {
-      return String(v);
-    }
-  }
-
-  try {
-    if (v instanceof Map) return JSON.stringify(Object.fromEntries(v));
-    if (v instanceof Set) return JSON.stringify(Array.from(v));
-    return JSON.stringify(v);
-  } catch {
-    return String(v);
-  }
+function isArrayOfObjects(v) {
+  return Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === "object");
 }
 
 /**
- * Debug logger:
- * - If an argument is an array of objects -> show it as a table, but grouped/collapsed.
- * - Otherwise compact log output (stringify objects to avoid prototype tree noise).
+ * dbg(debug, prefix, label, data?)
+ *
+ * Behaviors:
+ * - dbg(..., label) -> simple log line
+ * - dbg(..., label, arrayOfObjects) -> table
+ * - dbg(..., label, plainObject) -> table with 1 row (no JSON string)
+ * - dbg(..., label, anythingElse...) -> console.log(...)
  */
 export function dbg(debug, prefix, ...args) {
   if (!debug) return;
 
-  const idx = args.findIndex(isArrayOfObjects);
-  if (idx >= 0) {
-    const tableData = args[idx];
-    const before = args.slice(0, idx).map(formatArg);
-    const after = args.slice(idx + 1).map(formatArg);
+  // no payload
+  if (args.length <= 1) {
+    console.log(prefix, ...args);
+    return;
+  }
 
-    // Put the table inside a collapsed group so it doesn't spam the console timeline.
-    const titleParts = [prefix, ...before, ...after].filter((x) => x !== "");
-    console.groupCollapsed(...titleParts);
-    console.table(tableData);
+  const [label, payload, ...rest] = args;
+
+  // If payload is a table candidate, show it as a compact table wrapped in a group.
+  if (isArrayOfObjects(payload)) {
+    console.groupCollapsed(`${prefix} ${label}`);
+    console.table(payload);
+    if (rest.length) console.log(...rest);
     console.groupEnd();
     return;
   }
 
-  console.log(prefix, ...args.map(formatArg));
+  if (isPlainObject(payload)) {
+    console.groupCollapsed(`${prefix} ${label}`);
+    console.table([payload]); // <-- this fixes the JSON-string "summary"
+    if (rest.length) console.log(...rest);
+    console.groupEnd();
+    return;
+  }
+
+  // Fallback: normal log (keeps e.g. strings, numbers, etc.)
+  console.log(prefix, label, payload, ...rest);
 }
 
 export function dbgGroup(debug, prefix, title) {
