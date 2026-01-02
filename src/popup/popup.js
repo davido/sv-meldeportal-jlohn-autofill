@@ -57,12 +57,29 @@ function formatResultMessage(r) {
 
   if (skippedZero > 0) msg += `, ${skippedZero} × 0,00 übersprungen`;
 
-  // Optional: Hinweis aus Content Script (z.B. fehlende Felder, dynamisch ausgeblendet)
   if (typeof r.details === "string" && r.details.trim()) {
     msg += `\n${r.details.trim()}`;
   }
 
   return msg;
+}
+
+function deriveLevelFromResult(r) {
+  // Preferred: new structured severity
+  if (r?.severity === "ok") return "ok";
+  if (r?.severity === "warn") return "warn";
+  if (r?.severity === "error") return "error";
+
+  // Fallback: old heuristic based on count
+  const missingNonZeroCount =
+    typeof r?.missingNonZeroCount === "number"
+      ? r.missingNonZeroCount
+      : typeof r?.missingRequiredCount === "number"
+        ? r.missingRequiredCount
+        : 0;
+
+  if (r?.ok) return "ok";
+  return missingNonZeroCount === 1 ? "warn" : "error";
 }
 
 async function handleFillKeyedClick() {
@@ -73,7 +90,6 @@ async function handleFillKeyedClick() {
     const textarea = document.getElementById("keyedInput");
     let raw = (textarea?.value || "").trim();
 
-    // optional: falls leer, direkt aus Zwischenablage holen
     if (!raw) raw = await readFromClipboardIfEmpty(textarea);
     if (!raw) return setStatus("Keine Eingabe gefunden.", "error");
 
@@ -83,30 +99,20 @@ async function handleFillKeyedClick() {
     const r = await runInActiveTab({ raw, debug });
 
     if (debug) {
-      // Debug-Ausgabe in der Popup-Konsole (nicht nur in der Seiten-Konsole)
       console.log("[SV-Autofill][POPUP] Ergebnis:", r);
       if (r?.form || r?.formLabel) {
         console.log("[SV-Autofill][POPUP] Erkanntes Formular:", r.formLabel || r.form);
       }
     }
 
-    const missingNonZeroCount =
-      typeof r?.missingNonZeroCount === "number"
-        ? r.missingNonZeroCount
-        : typeof r?.missingRequiredCount === "number"
-          ? r.missingRequiredCount
-          : 0;
+    const level = deriveLevelFromResult(r);
 
-    if (r?.ok) {
-      // wirklich alles ok
+    if (level === "ok") {
       setStatus(formatResultMessage(r), "ok");
     } else {
-      // ok=false: differenzieren: 1 -> warn, >=2 -> error
       const details =
         typeof r?.details === "string" && r.details.trim() ? `\n${r.details.trim()}` : "";
       const msg = `${r?.message || "Fehler – nicht alle Werte konnten gesetzt werden."}${details}`;
-
-      const level = missingNonZeroCount === 1 ? "warn" : "error";
       setStatus(msg, level);
     }
   } finally {
