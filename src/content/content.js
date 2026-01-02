@@ -1,4 +1,5 @@
-import { runAutofillFromRaw } from "./autofill.js";
+import { runAutofillFromRaw } from "./autofill/index.js";
+
 
 /**
  * Content script message handler.

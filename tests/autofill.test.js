@@ -6,7 +6,7 @@ import {
   parseKeyedToMap,
   detectForm,
   runAutofillFromRaw
-} from "../src/content/autofill.js";
+} from "../src/content/autofill/index.js";
 
 function makeDocWithInputs(fieldNames) {
   const doc = document.implementation.createHTMLDocument("test");
