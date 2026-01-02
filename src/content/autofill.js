@@ -1,53 +1,11 @@
 import { FORM_DEFS } from "../shared/forms.js";
 import { normalizeNumberToPortal, isZeroValue } from "../shared/number.js";
 import { dbg, dbgGroup, dbgGroupEnd } from "../shared/debug.js";
+import { extractRelevantLine, parseKeyedToMap } from "./autofill/parse.js";
+
+export { extractRelevantLine, parseKeyedToMap };
 
 const LOG_PREFIX = "[SV-Autofill]";
-
-/**
- * Extrahiert eine sinnvolle Zeile aus dem Rohtext.
- * - Bei Multi-Line: bevorzugt eine Zeile mit ":" (keyed)
- */
-export function extractRelevantLine(input) {
-  if (input == null) return "";
-  const s0 = String(input)
-    .replace(/^\uFEFF/, "")
-    .trim();
-  if (!s0) return "";
-
-  const lines = s0
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  return (lines.find((l) => l.includes(":")) || lines[0] || "").trim();
-}
-
-/**
- * Parsed keyed input in Map(fieldName -> rawValue).
- * Toleriert ";;;" (führt zu leerem Token) und führende ';' in Tokens.
- */
-export function parseKeyedToMap(line) {
-  const map = new Map();
-  const parts = String(line || "")
-    .split(";;")
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  for (let p of parts) {
-    p = p.replace(/^;+/, "").trim(); // tolerate ';;;'
-
-    const idx = p.indexOf(":");
-    if (idx <= 0) continue;
-
-    const key = p.slice(0, idx).trim().replace(/^;+/, "");
-    const value = p.slice(idx + 1).trim();
-    if (!key) continue;
-
-    map.set(key, value);
-  }
-  return map;
-}
 
 /** Baut eine Map(name -> inputElement|null) für ein bestimmtes Feld-Set. */
 export function findInputsByName(doc, fields) {
@@ -146,6 +104,7 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   // Erwartete Felder, die aktuell nicht im DOM sind (toleriert, aber wir reporten)
   const missing = fields.filter((f) => !inputsByName.get(f));
   if (missing.length) {
+    // keep this compact (debug.js will stringify)
     dbg(debug, LOG_PREFIX, "fehlende Felder (toleriert)", {
       formId,
       missingCount: missing.length,
@@ -159,9 +118,9 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   let ignoredUnknown = 0;
 
   // Missing non-zero buckets
-  const missingRequiredNonZero = []; // {name,value}
-  const missingDynamicNonZero = []; // {name,value}
-  const missingOtherNonZero = []; // {name,value}
+  const missingRequiredNonZero = []; // {bucket,name,value}
+  const missingDynamicNonZero = []; // {bucket,name,value}
+  const missingOtherNonZero = []; // {bucket,name,value}
 
   const g = dbgGroup(debug, LOG_PREFIX, `apply (${formLabel})`);
 
@@ -243,6 +202,9 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   // ok=true only when severity is ok (green)
   const ok = severity === "ok";
 
+  // ✅ Debug clean-up:
+  // - Keep "summary" compact (no nested arrays)
+  // - Show missingNonZero as a dedicated table (if present)
   dbg(debug, LOG_PREFIX, "summary", {
     formId,
     applied,
@@ -253,11 +215,12 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
     missingNonZeroCount,
     missingRequiredNonZeroCount,
     missingDynamicNonZeroCount,
-    missingOtherNonZeroCount,
-    missingRequiredNonZero,
-    missingDynamicNonZero,
-    missingOtherNonZero
+    missingOtherNonZeroCount
   });
+
+  if (missingNonZeroCount > 0) {
+    dbg(debug, LOG_PREFIX, "missingNonZero", missingNonZero);
+  }
 
   // Details fürs Popup
   const detailsParts = [];
@@ -363,3 +326,4 @@ export function runAutofillFromRaw(raw, doc = document, { debug = false } = {}) 
 
   return applyValuesToDocument(doc, values, formInfo, { debug });
 }
+
