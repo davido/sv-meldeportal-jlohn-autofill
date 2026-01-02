@@ -214,4 +214,3 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
     missingOtherNonZero
   };
 }
-

@@ -24,4 +24,3 @@ function computeSeverity({ missingRequired, missingDynamic, missingOther }) {
 }
 
 export { classifyMissingNonZero, computeSeverity };
-

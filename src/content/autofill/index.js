@@ -25,4 +25,3 @@ export function runAutofillFromRaw(raw, doc = document, { debug = false } = {}) 
 
   return applyValuesToDocument(doc, values, formInfo, { debug });
 }
-

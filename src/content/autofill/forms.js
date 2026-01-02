@@ -63,4 +63,3 @@ export function detectForm(doc, { debug = false } = {}) {
     totalCount: best.detectTotal
   };
 }
-

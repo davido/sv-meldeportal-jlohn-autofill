@@ -47,4 +47,3 @@ export function parseKeyedToMap(line) {
   }
   return map;
 }
-
