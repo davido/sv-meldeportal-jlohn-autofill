@@ -1,9 +1,6 @@
 // Debug helper functions controlled ONLY by an explicit boolean.
 // No storage access here.
 
-/**
- * True when the value is an array of plain objects suitable for console.table.
- */
 function isArrayOfObjects(v) {
   return (
     Array.isArray(v) &&
@@ -12,12 +9,6 @@ function isArrayOfObjects(v) {
   );
 }
 
-/**
- * Compact formatting to avoid DevTools dumping huge prototype trees.
- * - primitives pass through
- * - arrays of primitives get a short inline representation
- * - objects/arrays/maps/sets are JSON-stringified best-effort
- */
 function formatArg(v) {
   if (v == null) return String(v);
 
@@ -46,25 +37,28 @@ function formatArg(v) {
   }
 }
 
+/**
+ * Debug logger:
+ * - If an argument is an array of objects -> show it as a table, but grouped/collapsed.
+ * - Otherwise compact log output (stringify objects to avoid prototype tree noise).
+ */
 export function dbg(debug, prefix, ...args) {
   if (!debug) return;
 
-  // If any argument is an array of objects, show it as a table
   const idx = args.findIndex(isArrayOfObjects);
   if (idx >= 0) {
     const tableData = args[idx];
     const before = args.slice(0, idx).map(formatArg);
     const after = args.slice(idx + 1).map(formatArg);
 
-    // Keep context line compact
-    console.log(prefix, ...before, ...after);
-
-    // Show the structured data as a table
+    // Put the table inside a collapsed group so it doesn't spam the console timeline.
+    const titleParts = [prefix, ...before, ...after].filter((x) => x !== "");
+    console.groupCollapsed(...titleParts);
     console.table(tableData);
+    console.groupEnd();
     return;
   }
 
-  // Default: compact output
   console.log(prefix, ...args.map(formatArg));
 }
 

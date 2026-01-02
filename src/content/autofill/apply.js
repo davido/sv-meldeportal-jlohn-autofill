@@ -4,6 +4,11 @@ import { classifyMissingNonZero, computeSeverity } from "./severity.js";
 
 const LOG_PREFIX = "[SV-Autofill]";
 
+function toNameTable(names, extra = {}) {
+  // console.table wants an array of objects
+  return names.map((name) => ({ ...extra, name }));
+}
+
 export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false } = {}) {
   const evOpts = { bubbles: true };
   const { fields, inputsByName, formId, formLabel, requiredFields, dynamicFields } = formInfo;
@@ -15,11 +20,12 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   // Erwartete Felder, die aktuell nicht im DOM sind (toleriert, aber wir reporten)
   const missing = fields.filter((f) => !inputsByName.get(f));
   if (missing.length) {
-    dbg(debug, LOG_PREFIX, "fehlende Felder (toleriert)", {
-      formId,
-      missingCount: missing.length,
-      missing
-    });
+    dbg(
+      debug,
+      LOG_PREFIX,
+      `fehlende Felder (toleriert) – ${missing.length}`,
+      toNameTable(missing, { formId })
+    );
   }
 
   let applied = 0;
@@ -113,8 +119,8 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   const ok = severity === "ok";
 
   // ✅ Debug clean-up:
-  // - Keep "summary" compact (no nested arrays)
-  // - Show missingNonZero as a dedicated table (if present)
+  // - summary compact (no nested arrays)
+  // - structured tables for missingNonZero
   dbg(debug, LOG_PREFIX, "summary", {
     formId,
     applied,
