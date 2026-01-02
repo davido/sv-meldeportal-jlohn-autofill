@@ -3,8 +3,12 @@ export function setStatus(text, type = "info") {
   if (!el) return;
 
   el.textContent = text || "";
-  el.classList.remove("ok", "error", "info");
-  el.classList.add(type === "ok" ? "ok" : type === "error" ? "error" : "info");
+  el.classList.remove("ok", "warn", "error", "info");
+
+  if (type === "ok") el.classList.add("ok");
+  else if (type === "warn") el.classList.add("warn");
+  else if (type === "error") el.classList.add("error");
+  else el.classList.add("info");
 }
 
 export function clearStatus() {

@@ -171,4 +171,72 @@ describe("runAutofillFromRaw (jsdom, multi-form keyed-only)", () => {
     expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("");
     expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
   });
+
+  // -----------------------------
+  // Ampel-Signale (missingNonZeroCount)
+  // -----------------------------
+
+  it("ampel: green signal when missing fields exist but all missing values are 0,00", () => {
+    // create a doc that lacks 'beitragZusatzKrankenvers' and 'beitragZusatz'
+    const reducedFields = FIELD_ORDER.filter(
+      (f) => f !== "beitragZusatzKrankenvers" && f !== "beitragZusatz"
+    );
+    const doc = makeDocWithInputs(reducedFields);
+
+    const raw =
+      "beitrag1000:10,00;;beitragZusatzKrankenvers:0,00;;beitragZusatz:0,00;;beitragU1:5,00";
+    const r = runAutofillFromRaw(raw, doc);
+
+    expect(r.ok).toBe(true);
+    expect(r.form).toBe("formStandard");
+    expect(r.missingNonZeroCount ?? 0).toBe(0);
+
+    // values that are present should be set
+    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("10,00");
+    expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
+
+  it("ampel: yellow signal input (ok=false) when exactly one non-zero field cannot be set (missingNonZeroCount=1)", () => {
+    // doc lacks beitragZusatzKrankenvers
+    const reducedFields = FIELD_ORDER.filter((f) => f !== "beitragZusatzKrankenvers");
+    const doc = makeDocWithInputs(reducedFields);
+
+    const raw = "beitrag1000:10,00;;beitragZusatzKrankenvers:115,16;;beitragU1:5,00";
+    const r = runAutofillFromRaw(raw, doc);
+
+    expect(r.ok).toBe(false);
+    expect(r.form).toBe("formStandard");
+    expect(r.missingNonZeroCount).toBe(1);
+
+    // details should mention the missing non-zero value
+    expect(String(r.details || "")).toContain("beitragZusatzKrankenvers");
+    expect(String(r.details || "")).toContain("115,16");
+
+    // other values still applied
+    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("10,00");
+    expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
+
+  it("ampel: red signal input (ok=false) when two or more non-zero fields cannot be set (missingNonZeroCount>=2)", () => {
+    // doc lacks both fields
+    const reducedFields = FIELD_ORDER.filter(
+      (f) => f !== "beitragZusatzKrankenvers" && f !== "beitragZusatz"
+    );
+    const doc = makeDocWithInputs(reducedFields);
+
+    const raw =
+      "beitrag1000:10,00;;beitragZusatzKrankenvers:115,16;;beitragZusatz:12,34;;beitragU1:5,00";
+    const r = runAutofillFromRaw(raw, doc);
+
+    expect(r.ok).toBe(false);
+    expect(r.form).toBe("formStandard");
+    expect(r.missingNonZeroCount).toBeGreaterThanOrEqual(2);
+
+    expect(String(r.details || "")).toContain("beitragZusatzKrankenvers");
+    expect(String(r.details || "")).toContain("beitragZusatz: 12,34");
+
+    // other values still applied
+    expect(doc.querySelector('input[name="beitrag1000"]').value).toBe("10,00");
+    expect(doc.querySelector('input[name="beitragU1"]').value).toBe("5,00");
+  });
 });

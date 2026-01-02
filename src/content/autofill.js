@@ -108,8 +108,9 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   const evOpts = { bubbles: true };
   const { fields, inputsByName, formId, formLabel } = formInfo;
 
-  // Wir sind absichtlich tolerant: manche Portale blenden Felder dynamisch ein/aus.
-  // Trotzdem loggen wir, wenn erwartete Felder fehlen.
+  const allowed = new Set(fields);
+
+  // Erwartete Felder, die aktuell nicht im DOM sind (toleriert, aber wir reporten)
   const missing = fields.filter((f) => !inputsByName.get(f));
   if (missing.length) {
     dbg(debug, LOG_PREFIX, "fehlende Felder (toleriert)", {
@@ -124,12 +125,14 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
   let skippedReadonly = 0;
   let ignoredUnknown = 0;
 
+  // NEU: ≠0,00 Werte, die nicht gesetzt werden konnten, weil Feld fehlt
+  const missingNonZero = []; // { name, value }
+
   const g = dbgGroup(debug, LOG_PREFIX, `apply (${formLabel})`);
 
   for (const [name, rawVal] of valuesMap.entries()) {
-    const el = inputsByName.get(name);
-    if (!el) {
-      // Keyed-Daten dürfen mehr enthalten als das aktuelle Formular braucht
+    // 1) Wirklich unbekannt: nicht Teil dieses Formulars
+    if (!allowed.has(name)) {
       ignoredUnknown++;
       dbg(debug, LOG_PREFIX, "ignoriere unbekannten Key (für dieses Formular)", name);
       continue;
@@ -138,9 +141,30 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
     const normalized = normalizeNumberToPortal(rawVal);
     if (normalized == null || normalized === "") continue;
 
+    // 0,00 ist explizit "egal" -> nicht required
     if (isZeroValue(normalized)) {
       skippedZero++;
       dbg(debug, LOG_PREFIX, "überspringe 0,00", name);
+      continue;
+    }
+
+    // 2) Lazy lookup: falls Feld dynamisch nach Beitragszeitraum o. ä. erscheint
+    let el = inputsByName.get(name);
+    if (!el) {
+      el = doc.querySelector(`input[name="${name}"]`);
+      if (el) inputsByName.set(name, el);
+    }
+
+    // 3) Feld fehlt -> für ≠0,00 ein Fehler (für Status rot)
+    if (!el) {
+      missingNonZero.push({ name, value: normalized });
+      dbg(
+        debug,
+        LOG_PREFIX,
+        "FEHLT (≠0,00) – Feld nicht im DOM, Wert NICHT gesetzt",
+        name,
+        normalized
+      );
       continue;
     }
 
@@ -161,19 +185,41 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
 
   if (g) dbgGroupEnd(debug);
 
+  const missingNonZeroCount = missingNonZero.length;
+
   dbg(debug, LOG_PREFIX, "summary", {
     formId,
     applied,
     skippedZero,
     skippedReadonly,
-    ignoredUnknown
+    ignoredUnknown,
+    missingNonZeroCount,
+    missingNonZero
   });
 
-  // Optionaler Hinweistext (nur wenn wirklich viele Felder fehlen)
-  const missingHint =
-    missing.length > 0
-      ? `Hinweis: ${missing.length} Felder des Formulars „${formLabel}“ sind auf der Seite nicht vorhanden (evtl. abhängig von Auswahl).`
-      : "";
+  // Details fürs Popup
+  const detailsParts = [];
+
+  if (missingNonZeroCount > 0) {
+    detailsParts.push(
+      `Nicht gesetzte Werte (≠ 0,00), weil Felder auf der Maske fehlen:\n` +
+        missingNonZero.map((x) => `- ${x.name}: ${x.value}`).join("\n")
+    );
+    detailsParts.push(
+      `Tipp: Im SV-Meldeportal erscheinen manche Felder (z.B. Zusatzbeitrag) erst nach Eingabe des Beitragszeitraums.`
+    );
+  }
+
+  if (missing.length > 0) {
+    detailsParts.push(
+      `Hinweis: ${missing.length} Formularfelder sind aktuell nicht vorhanden (evtl. abhängig von Auswahl).`
+    );
+  }
+
+  const details = detailsParts.filter(Boolean).join("\n\n");
+
+  // ✅ Rot (ok=false), sobald ≠0,00 nicht gesetzt werden konnte
+  const ok = missingNonZeroCount === 0;
 
   const baseMsg =
     applied === 0
@@ -182,15 +228,20 @@ export function applyValuesToDocument(doc, valuesMap, formInfo, { debug = false 
         ? `${applied} Feld${applied === 1 ? "" : "er"} befüllt (${formLabel}).`
         : `${applied} Feld${applied === 1 ? "" : "er"} befüllt (${formLabel}), ${skippedZero}× 0,00 übersprungen.`;
 
+  const message = ok ? baseMsg : `Fehler – nicht alle Werte konnten gesetzt werden (${formLabel}).`;
+
   return {
-    ok: true,
+    ok,
+    message,
+    details,
     form: formId,
     formLabel,
     appliedCount: applied,
     skippedZeroCount: skippedZero,
     skippedReadonlyCount: skippedReadonly,
     ignoredUnknownCount: ignoredUnknown,
-    message: missingHint ? `${baseMsg}\n${missingHint}` : baseMsg
+    missingNonZeroCount,
+    missingNonZero
   };
 }
 

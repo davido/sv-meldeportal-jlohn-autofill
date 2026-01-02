@@ -90,12 +90,24 @@ async function handleFillKeyedClick() {
       }
     }
 
+    const missingNonZeroCount =
+      typeof r?.missingNonZeroCount === "number"
+        ? r.missingNonZeroCount
+        : typeof r?.missingRequiredCount === "number"
+          ? r.missingRequiredCount
+          : 0;
+
     if (r?.ok) {
+      // wirklich alles ok
       setStatus(formatResultMessage(r), "ok");
     } else {
+      // ok=false: differenzieren: 1 -> warn, >=2 -> error
       const details =
         typeof r?.details === "string" && r.details.trim() ? `\n${r.details.trim()}` : "";
-      setStatus(`Fehler – ${r?.message || "unbekannt"}${details}`, "error");
+      const msg = `${r?.message || "Fehler – nicht alle Werte konnten gesetzt werden."}${details}`;
+
+      const level = missingNonZeroCount === 1 ? "warn" : "error";
+      setStatus(msg, level);
     }
   } finally {
     setBusy(false);
