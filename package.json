@@ -14,11 +14,11 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.16",
-    "archiver": "^6.0.2",
+    "archiver": "^7.0.1",
     "esbuild": "^0.27.2",
     "eslint": "^9.8.0",
-    "globals": "^15.9.0",
-    "jsdom": "^25.0.1",
+    "globals": "^17.0.0",
+    "jsdom": "^27.4.0",
     "prettier": "^3.3.3",
     "vitest": "^4.0.16"
   }
