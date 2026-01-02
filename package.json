@@ -13,13 +13,13 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/coverage-v8": "^4.0.16",
     "archiver": "^6.0.2",
-    "esbuild": "^0.27.1",
+    "esbuild": "^0.27.2",
     "eslint": "^9.8.0",
     "globals": "^15.9.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.3.3",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.16"
   }
 }
